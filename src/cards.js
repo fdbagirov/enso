@@ -6,7 +6,7 @@
 // В каждой карточке один видимый слой (нижние слои Figma закрыты верхним и только зря грузились),
 // и в Hero и главах (блоки 1–4) ни одно фото не повторяется. Люди — оригиналы генераций (img/people).
 
-const img = (name) => `/img/${name}.webp`;
+const img = (name) => `${import.meta.env.BASE_URL}img/${name}.webp`;
 
 const CROP_BL = { w: 275.22, h: 225.85, l: -50.86, t: -25.61 };
 const CROP_R = { w: 236.5, h: 220.55, l: -136.93, t: -10.19 };
@@ -71,7 +71,7 @@ export const CARDS = [
 export const IMAGES = [
   ...new Set([
     ...CARDS.flatMap((c) => c.layers.map((l) => l.src)),
-    img('3f63f'), img('people/sleeping-family'), '/img/loc/cyclist-frame0.webp',
+    img('3f63f'), img('people/sleeping-family'), img('loc/cyclist-frame0'),
   ]),
 ];
 

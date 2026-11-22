@@ -230,7 +230,7 @@ function makeDraw(paths, { total = 1.7, lineStrokes = [] } = {}) {
 async function inlineSvgs() {
   await Promise.all(
     $$('[data-inline-svg]').map(async (host) => {
-      host.innerHTML = await fetch(host.dataset.inlineSvg).then((r) => r.text());
+      host.innerHTML = await fetch(import.meta.env.BASE_URL + host.dataset.inlineSvg.replace(/^\//, '')).then((r) => r.text());
       host.querySelectorAll('path').forEach((p) => {
         const len = p.getTotalLength();
         p.dataset.len = len;
