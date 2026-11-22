@@ -6,6 +6,7 @@ import { CARDS, IMAGES, buildCard } from './cards.js';
 import { SCRIPTS } from './handwriting.js';
 import { buildBook } from './book.js';
 import { addAmbient, startAmbient, hoverEnabled } from './ambient.js';
+import { buildInfra } from './infra.js';
 
 gsap.registerPlugin(ScrollTrigger, Flip);
 
@@ -118,7 +119,14 @@ function laneRect(c) {
 // Длина скролл-таймлайна в условных единицах: 0–1 — уход Hero, далее три главы,
 // потом фото третьей главы раскрывается на весь экран и превращается в альбом из трёх разворотов.
 // Следующая глава стартует через 0.3 после ухода предыдущей — фото и тексты не пересекаются.
-const STORY_LENGTH = 14.2;
+const STORY_LENGTH = 18.6;
+// Альбом закрывается: левая страница разворота 03 со всем содержимым ложится через корешок на правую,
+// показывая тёмную обложку; позади уже голубой фон карты. Закрытый альбом уходит, из фона проступает
+// карта района — сначала сверху, потом ложится в перспективу. Содержимое блока появляется само, по времени.
+const CLOSE = { at: 14.4, d: 1.4 };
+const MAP = { goneAt: CLOSE.at + CLOSE.d + 0.15, tiltAt: 16.4, tilt: 1.6 };
+const MAP_SETTLED = MAP.tiltAt + MAP.tilt;
+let closing = false;
 const ZOOM = { at: 6.6, d: 1.3 }; // фото главы 3 → видео на весь экран (как в Getty)
 const ZOOM_END = ZOOM.at + ZOOM.d; // отсюда видео играет, а разворот 01 проявляется сам
 let spreadIntro; // появление разворота 01 — по времени, не по скроллу
@@ -342,6 +350,7 @@ await reveal.then();
 document.body.style.overflow = '';
 lenis.start();
 const book = buildBook($('#book'));
+const infra = buildInfra($('#infra'));
 const story = buildStory();
 setupAmbient();
 if (import.meta.env.DEV) Object.assign(window, { __story: story, __book: book });
@@ -386,7 +395,7 @@ function updateBook(t) {
   const want = [
     t >= ZOOM_END && t < f1.at + f1.d,
     t > f1.at - 0.4 && t < f2.at + f2.d,
-    t > f2.at - 0.4,
+    t > f2.at - 0.4 && t < MAP.goneAt + 0.6,
   ];
   book.videos.forEach((v, i) => {
     if (want[i] && v.paused) v.play().catch(() => {});
@@ -401,6 +410,11 @@ function updateBook(t) {
     if (show) spreadIntro?.play();
     else spreadIntro?.reverse();
   }
+  // Страница начинает закрываться — на её копию кладём текущий кадр видео
+  const isClosing = t >= CLOSE.at && t <= CLOSE.at + CLOSE.d;
+  if (isClosing && !closing) book.freezeCloser();
+  closing = isClosing;
+  infra.setActive(t >= MAP_SETTLED - 0.1);
   book.setActiveLeaf(FLIPS.findIndex((f) => t >= f.at && t <= f.at + f.d));
   FLIPS.forEach((f, i) => book.renderLeaf(i, gsap.utils.clamp(0, 1, (t - f.at) / f.d)));
 }
@@ -477,6 +491,7 @@ function buildStory() {
   // До запуска истории фото глав спрятаны CSS-ом; теперь они стоят за нижним краем
   gsap.set(medias, { opacity: 1 });
   buildAlbum(tl);
+  buildMapTransition(tl);
   tl.to({}, { duration: 0.01 }, STORY_LENGTH - 0.01);
   updateFlow(tl.time());
   updateBook(tl.time());
@@ -548,6 +563,43 @@ function buildAlbum(tl) {
       .set(leaf, { visibility: 'hidden' }, at + d)
       .set(from, { visibility: 'hidden' }, at + d);
   });
+}
+
+/* ---------------- Переход: альбом → карта района ---------------- */
+function buildMapTransition(tl) {
+  const s3 = book.spreads[2];
+  const { el: closer, shades: [front, back], cast } = book.closer;
+  const c = CLOSE.at;
+  const map = infra.state;
+
+  // Позади альбома — голубой фон следующего блока
+  tl.set('.backdrop', { visibility: 'visible' }, c)
+    // Правая страница (вместе с видео, текстами и коллажем) отрывается от разворота…
+    .set(closer, { visibility: 'visible' }, c)
+    .set(s3, { clipPath: 'inset(0% 50% 0% 0%)' }, c)
+    // …и, как при листании, ложится через корешок налево: видим тёмную обложку альбома
+    .fromTo(closer, { rotationY: 0 }, { rotationY: -180, duration: CLOSE.d, ease: 'power2.inOut' }, c)
+    .fromTo(closer, { z: 0 }, { z: () => 60 * su(), duration: CLOSE.d / 2, ease: 'sine.out', yoyo: true, repeat: 1 }, c)
+    .fromTo(front, { opacity: 0 }, { opacity: 0.85, duration: CLOSE.d / 2, ease: 'power1.in' }, c)
+    .fromTo(back, { opacity: 0.6 }, { opacity: 0, duration: CLOSE.d / 2, ease: 'power1.out' }, c + CLOSE.d / 2)
+    // Тень закрывающейся страницы на левой странице сгущается к концу
+    .fromTo(cast, { opacity: 0 }, { opacity: 1, duration: CLOSE.d * 0.9, ease: 'power2.in' }, c + CLOSE.d * 0.1)
+    // Закрытый альбом уходит: чуть отдаляется и тает
+    .to([s3, closer], { opacity: 0, duration: 0.6, ease: 'power1.in' }, MAP.goneAt)
+    .to(cast, { opacity: 0, duration: 0.3 }, MAP.goneAt)
+    .fromTo($('#book'), { scale: 1 }, { scale: 0.94, duration: 0.6, ease: 'power1.in' }, MAP.goneAt)
+    // Блок карты: фон того же цвета, карта проступает сверху и ложится в перспективу
+    .set(infra.root, { visibility: 'visible' }, MAP.tiltAt)
+    .set($('.infra__bg', infra.root), { opacity: 1 }, MAP.tiltAt)
+    .fromTo(map, { op: 0 }, { op: 1, duration: 0.6, ease: 'power1.out', onUpdate: infra.touch }, MAP.tiltAt)
+    .fromTo(map, { rx: 0, rz: -40, sc: 1.35 }, { rx: 63, rz: -63, sc: 1, duration: MAP.tilt, ease: 'power2.inOut', onUpdate: infra.touch }, MAP.tiltAt)
+    // Хедер снова тёмный, плашка — голубая, как в макете блока
+    .to(logo, { backgroundColor: '#2f4765', duration: 0.5 }, MAP.goneAt)
+    .to('.btn--dark', { backgroundColor: '#2f4765', color: '#ffffff', duration: 0.5 }, MAP.goneAt)
+    .to('.btn-burger', { backgroundColor: '#bbcfe2', duration: 0.5 }, MAP.goneAt)
+    .to('.btn-burger span', { backgroundColor: '#2f4765', duration: 0.5 }, MAP.goneAt)
+    .to('.side-widget--light', { opacity: 0, duration: 0.5 }, MAP.goneAt)
+    .to('.side-widget--map', { opacity: 1, duration: 0.5 }, MAP.goneAt);
 }
 
 /* ---------------- Живой коллаж: мышь + покачивание ---------------- */

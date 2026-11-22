@@ -26,6 +26,7 @@
   <!-- Вертикальная плашка справа -->
   <img class="side-widget" src="/img/e9c73.svg" width="40" height="92" alt="" />
   <img class="side-widget side-widget--light" src="/img/loc/ca0e4.svg" width="40" height="92" alt="" />
+  <img class="side-widget side-widget--map" src="/img/map/c5355.svg" width="40" height="92" alt="" />
 
   <!-- Индикатор прогресса глав -->
   <div class="progress" aria-hidden="true">
@@ -127,6 +128,7 @@
 
         <!-- Альбом «Локация»: три разворота, листаются правой страницей через корешок.
              Координаты элементов (--x/--y/--w/--h) — в пикселях макетов «v2 · 05 Локация» 1440×900. -->
+        <div class="backdrop" aria-hidden="true"></div>
         <div class="book" id="book">
           <!-- Разворот 01: Знакомые места (129:1699) -->
           <section class="spread spread--1" data-spread="0" aria-label="Знакомые места будущих фотографий">
@@ -275,6 +277,97 @@
           </div>
           <i class="book__cast" aria-hidden="true"></i>
         </div>
+
+        <!-- Инфраструктура: список мест и карта района в перспективе (Figma 130:4929, состояния 127:556 / 130:4689 / 130:4499).
+             Рамка .infra__frame — макет 1440×900 в пикселях макета, масштабируется целиком (--s задаёт main.js). -->
+        <section class="infra" id="infra" aria-label="Инфраструктура рядом с ЭНСО">
+          <div class="infra__bg"></div>
+          <div class="infra__frame">
+            <div class="infra__map">
+              <div class="infra__view">
+                <div class="infra__space">
+                  <div class="infra__plane"><img src="/img/map/83feb.webp" alt="" /></div>
+                </div>
+                <i class="infra__fog infra__fog--top"></i>
+                <i class="infra__fog infra__fog--left"></i>
+              </div>
+              <!-- Всё, что стоит на карте, привязано к точкам плоскости и едет вместе с ней (main.js) -->
+              <div class="infra__marks">
+                <div class="mk mk--complex" data-anchor="1053.7,632.9">
+                  <img class="mk__building" src="/img/map/563ea.svg" width="119.723" height="116.049" alt="" />
+                </div>
+                <div class="mk mk--label" data-anchor="1020.1,470">
+                  <span class="mk__plate"><img src="/img/map/55616.svg" width="109.248" height="20.915" alt="ЭНСО" /></span>
+                  <img class="mk__stem" src="/img/map/6a7aa.svg" width="1.278" height="20.305" alt="" />
+                </div>
+                <button class="mk mk--pin" type="button" data-place="0" data-anchor="786.55,599.75">
+                  <span class="mk__icon"><img class="mk__pin" src="/img/map/f8e0f.svg" alt="" /><img class="mk__pin mk__pin--on" src="/img/map/98b06.svg" alt="" /></span>
+                  <span class="mk__name">Станция МЦД-4</span>
+                </button>
+                <button class="mk mk--pin" type="button" data-place="1" data-anchor="901,762.75">
+                  <span class="mk__icon"><img class="mk__pin" src="/img/map/f8e0f.svg" alt="" /><img class="mk__pin mk__pin--on" src="/img/map/98b06.svg" alt="" /></span>
+                  <span class="mk__name">Торговые центры</span>
+                </button>
+                <button class="mk mk--pin" type="button" data-place="2" data-anchor="1170.4,488.75">
+                  <span class="mk__icon"><img class="mk__pin" src="/img/map/f8e0f.svg" alt="" /><img class="mk__pin mk__pin--on" src="/img/map/98b06.svg" alt="" /></span>
+                  <span class="mk__name">Средняя школа</span>
+                </button>
+                <!-- Фото выбранного места всплывает над его пином -->
+                <figure class="mk mk--photo" data-place="0" data-anchor="786.55,599.75"><img src="/img/map/52290.webp" alt="Поезд МЦД-4 на станции" /></figure>
+                <figure class="mk mk--photo" data-place="1" data-anchor="901,762.75"><img src="/img/map/3486d.webp" alt="Торговый центр «Фестиваль»" /></figure>
+                <figure class="mk mk--photo" data-place="2" data-anchor="1170.4,488.75"><img src="/img/map/9ad7c.webp" alt="Здание школы" /></figure>
+              </div>
+            </div>
+
+            <div class="infra__text">
+              <span class="infra__tag">Инфраструктура</span>
+              <ul class="places">
+                <li class="place" data-place="0">
+                  <button class="place__name" type="button" aria-expanded="false">Станция МЦД-4</button>
+                  <div class="place__oval" data-inline-svg="/img/map/1d602.svg" aria-hidden="true"></div>
+                  <div class="place__more">
+                    <div class="place__more-in">
+                      <p class="place__text">Современная станция четвёртого диаметра позволяет без пробок добраться до&nbsp;Москва-Сити, Белорусского вокзала и&nbsp;ключевых пересадочных узлов в&nbsp;центре столицы.</p>
+                      <p class="place__time">
+                        <span><img src="/img/map/d86a5.svg" width="20" height="20" alt="На машине" />1 мин</span>
+                        <i aria-hidden="true"></i>
+                        <span><img src="/img/map/c3a02.svg" width="20" height="20" alt="Пешком" />3 мин</span>
+                      </p>
+                    </div>
+                  </div>
+                </li>
+                <li class="place" data-place="1">
+                  <button class="place__name" type="button" aria-expanded="false">Торговые центры</button>
+                  <div class="place__oval" data-inline-svg="/img/map/1d602.svg" aria-hidden="true"></div>
+                  <div class="place__more">
+                    <div class="place__more-in">
+                      <p class="place__text">Рядом работают ТЦ «Озёрный» и&nbsp;ТРЦ «Фестиваль»&nbsp;— можно быстро зайти за&nbsp;продуктами, провести выходные в&nbsp;кино или поужинать всей семьёй.</p>
+                      <p class="place__time">
+                        <span><img src="/img/map/d86a5.svg" width="20" height="20" alt="На машине" />5 мин</span>
+                        <i aria-hidden="true"></i>
+                        <span><img src="/img/map/c3a02.svg" width="20" height="20" alt="Пешком" />12 мин</span>
+                      </p>
+                    </div>
+                  </div>
+                </li>
+                <li class="place" data-place="2">
+                  <button class="place__name" type="button" aria-expanded="false">Средняя школа</button>
+                  <div class="place__oval" data-inline-svg="/img/map/1d602.svg" aria-hidden="true"></div>
+                  <div class="place__more">
+                    <div class="place__more-in">
+                      <p class="place__text">В&nbsp;нескольких минутах от&nbsp;дома работают школы, детские сады и&nbsp;спортивные секции&nbsp;— дорога на&nbsp;занятия занимает минимум времени.</p>
+                      <p class="place__time">
+                        <span><img src="/img/map/d86a5.svg" width="20" height="20" alt="На машине" />1 мин</span>
+                        <i aria-hidden="true"></i>
+                        <span><img src="/img/map/c3a02.svg" width="20" height="20" alt="Пешком" />3 мин</span>
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </div>
     </section>
   </main>

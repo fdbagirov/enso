@@ -80,11 +80,37 @@ export function buildBook(root) {
 
   let active = -1;
 
+  /* Закрытие альбома — в ту же сторону, что и листание: правая страница последнего разворота
+     поворачивается через корешок и ложится налево. Лицо — копия правой страницы, оборот — тёмная обложка. */
+  const last = spreads[spreads.length - 1];
+  const closer = document.createElement('div');
+  closer.className = 'closer';
+  closer.setAttribute('aria-hidden', 'true');
+  const closerFront = makeFace('front', last, -1);
+  closerFront.face.classList.add('closer__face');
+  const cover = document.createElement('div');
+  cover.className = 'leaf__face leaf__back closer__face closer__cover';
+  const coverShade = document.createElement('i');
+  coverShade.className = 'leaf__shade';
+  cover.append(coverShade);
+  closer.append(closerFront.face, cover);
+  const closerCast = document.createElement('i');
+  closerCast.className = 'closer__cast';
+  root.append(closer, closerCast);
+  // Копия в полосе была рассчитана на ширину листа из полос; у обложки — половина экрана
+  closerFront.face.querySelector('.spread').style.width = '200%';
+
   return {
     spreads,
     videos,
     leaves,
     cast: root.querySelector('.book__cast'),
+    closer: { el: closer, shades: [closerFront.shade, coverShade], cast: closerCast },
+    // Альбом начинает закрываться: на копию левой страницы кладём текущий кадр видео
+    freezeCloser() {
+      const src = snapshot(last.querySelector('video'));
+      if (src) closerFront.frame.src = src;
+    },
     // Лист i начинает движение: на его копии кладём текущие кадры обоих видео
     setActiveLeaf(i) {
       if (i === active) return;

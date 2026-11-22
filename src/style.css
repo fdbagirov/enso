@@ -176,7 +176,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 }
 
 /* ---------- Сцена истории ---------- */
-.story { position: relative; height: 1700vh; }
+.story { position: relative; height: 2220vh; }
 .stage {
   position: sticky;
   top: 0;
@@ -687,6 +687,216 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   pointer-events: none;
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0) 85%);
 }
+
+/* Закрывающийся альбом: левая страница поворачивается вокруг корешка на правую */
+/* Закрытие — в ту же сторону, что и листание: правая страница ложится через корешок налево */
+.closer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  z-index: 11;
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+  visibility: hidden;
+}
+/* Обложка альбома: тёмная, с затенением у корешка (у закрытого альбома корешок справа) */
+.closer__cover {
+  background:
+    linear-gradient(270deg, rgba(0, 0, 0, 0.45) 0, rgba(0, 0, 0, 0.12) calc(28 * var(--u)), rgba(255, 255, 255, 0.04) calc(40 * var(--u)), rgba(0, 0, 0, 0) calc(70 * var(--u))),
+    linear-gradient(160deg, #2a3d55 0%, #1d2b3d 100%);
+}
+/* Тень закрывающейся страницы на левой странице */
+.closer__cast {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 9;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0) 85%);
+}
+/* Голубой фон блока карты: лежит под альбомом и виден, когда страница отходит от экрана */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #dbe6f0;
+  visibility: hidden;
+}
+
+/* ---------- Инфраструктура: список и карта ---------- */
+.side-widget--map { opacity: 0; background: none; }
+.infra {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  visibility: hidden;
+  pointer-events: none;
+  color: #2f4765;
+  --navy: #2f4765;
+}
+.infra__bg { position: absolute; inset: 0; background: #dbe6f0; opacity: 0; }
+/* Макет 1440×900 целиком, вписанный во вьюпорт: внутри — пиксели макета */
+.infra__frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1440px;
+  height: 900px;
+  margin: -450px 0 0 -720px;
+  transform: scale(var(--s, 1));
+}
+.infra__map { position: absolute; inset: 0; transform-origin: 1073px 556px; }
+.infra__view {
+  position: absolute;
+  left: 523px;
+  top: 212px;
+  width: 1100px;
+  height: 687.5px;
+  overflow: hidden;
+}
+.infra__space { position: absolute; inset: 0; perspective: 829.583px; }
+.infra__plane {
+  position: absolute;
+  left: -216.18px;
+  top: -770px;
+  width: 1858.542px;
+  height: 1858.542px;
+  transform: translateZ(97.014px) rotateX(63deg) rotateZ(-63deg);
+  will-change: transform;
+}
+.infra__plane img { width: 100%; height: 100%; max-width: none; }
+.infra__fog { position: absolute; pointer-events: none; }
+.infra__fog--top {
+  left: -81px;
+  top: -4px;
+  width: 1100px;
+  height: 687.5px;
+  background: linear-gradient(180deg, #dbe6f0 0%, #dbe6f0 18%, rgba(219, 230, 240, 0) 48%);
+}
+.infra__fog--left {
+  left: -57px;
+  top: -172px;
+  width: 687.5px;
+  height: 1100px;
+  background: linear-gradient(90deg, #dbe6f0 0%, #dbe6f0 18%, rgba(219, 230, 240, 0) 48%);
+}
+
+/* Метки на карте: каждая — точка-якорь 0×0, содержимое растёт от неё */
+.infra__marks { position: absolute; inset: 0; }
+.mk { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.mk__building {
+  position: absolute;
+  left: -59.86px;
+  bottom: 0;
+  width: 119.723px;
+  height: 116.049px;
+  max-width: none;
+  transform: rotate(2.86deg);
+}
+.mk__plate {
+  position: absolute;
+  left: -67.55px;
+  bottom: 23.66px;
+  width: 135.09px;
+  height: 43.54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy);
+  border-radius: 2px;
+}
+.mk__plate img { width: 108.277px; height: 20.078px; max-width: none; }
+.mk__stem { position: absolute; left: -0.64px; bottom: 0; width: 1.278px; height: 20.305px; max-width: none; }
+.mk--pin { pointer-events: auto; cursor: pointer; }
+.mk__icon {
+  position: absolute;
+  left: -15.5px;
+  bottom: 0;
+  width: 31.014px;
+  height: 50.749px;
+  transform-origin: 50% 100%;
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1);
+}
+.mk__pin { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; transition: opacity .4s; }
+.mk__pin--on { opacity: 0; }
+.mk__name {
+  position: absolute;
+  left: -62.5px;
+  top: 12px;
+  width: 125px;
+  font: 400 14px/18px var(--sans);
+  color: #788ba2;
+  text-align: center;
+  transition: color .4s;
+}
+/* Выбранное место: пин крупнее и темнее, подпись тёмная (как в состояниях макета) */
+.mk--pin.is-on .mk__icon { transform: scale(1.2955); }
+.mk--pin.is-on .mk__pin--on { opacity: 1; }
+.mk--pin.is-on .mk__name { color: var(--navy); top: 26.9px; }
+.mk--pin:focus-visible { outline: none; }
+.mk--pin:focus-visible .mk__icon { outline: 2px solid var(--navy); outline-offset: 4px; }
+.mk--photo {
+  width: 360px;
+  height: 203px;
+  /* фото стоит над пином: 203 высота + 65.75 (выбранный пин) + 24 зазор; left/top — якорь (main.js) */
+  margin: -292.75px 0 0 -180px;
+  border: 1.5px solid var(--navy);
+  overflow: hidden;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 3px 1px rgba(0, 0, 0, 0.01);
+}
+.mk--photo img { width: 100%; height: 100%; object-fit: cover; max-width: none; }
+
+.infra__text { position: absolute; left: 120px; top: 128px; width: 462px; pointer-events: auto; }
+.infra__tag {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 8px 20px;
+  border: 1px solid #93adcd;
+  border-radius: 100px;
+  font: 500 14px/20px var(--sans);
+}
+.places { margin-top: 32px; display: flex; flex-direction: column; gap: 40px; }
+.place { position: relative; }
+.place__name {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: 400 48px/52px var(--serif);
+  letter-spacing: -0.48px;
+  color: var(--navy);
+  transition: color .4s, opacity .4s;
+}
+.places.has-active .place:not(.is-active) .place__name { color: #516580; opacity: 0.8; }
+.place__name:focus-visible { outline: 2px solid var(--navy); outline-offset: 6px; border-radius: 4px; }
+/* Рукописный овал вокруг выбранного названия (прорисовывается штрихом) */
+.place__oval {
+  position: absolute;
+  left: -37px;
+  top: -51px;
+  width: 460.083px;
+  height: 151.309px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.place__oval svg { flex: none; width: 451.573px; height: 100.274px; overflow: visible; transform: rotate(-6.57deg) scaleY(-1); }
+.place__more { height: 0; overflow: hidden; }
+.place__more-in { width: 423px; padding-top: 40px; }
+.place__text { margin: 0; font: 400 16px/24px var(--sans); }
+.place__time { margin: 24px 0 0; display: flex; align-items: center; gap: 16px; font: 400 16px/22px var(--sans); }
+.place__time span { display: inline-flex; align-items: center; gap: 8px; }
+.place__time i { width: 1px; height: 16px; background: var(--navy); }
 
 /* Стартовое состояние до прелоадера */
 .is-loading .header__actions,
