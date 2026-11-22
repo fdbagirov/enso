@@ -125,8 +125,10 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   text-decoration: none;
   white-space: nowrap;
 }
-.btn--dark { background: var(--ink); color: #fff; transition: background-color .3s; }
-.btn--dark:hover { background: #2f2120; }
+/* Цвет кнопки по ходу истории ведёт GSAP (inline-стиль), поэтому без transition на background —
+   иначе цвет отстаёт от скролла; наведение — затемнением, оно работает при любом цвете */
+.btn--dark { background: var(--ink); color: #fff; transition: filter .3s; }
+.btn--dark:hover { filter: brightness(0.9); }
 .btn-burger {
   position: relative;
   width: 48px;

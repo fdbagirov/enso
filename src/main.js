@@ -349,7 +349,8 @@ reveal
   .to(heroTags, { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out' }, 1.15)
   .to(heroLines, { yPercent: 0, duration: 1.2, stagger: 0.12, ease: 'expo.out' }, 1.2)
   .call(() => makeDraw(drawn.hero).play(), null, 1.6)
-  .to(['.header__actions', '.side-widget'], { opacity: 1, duration: 0.8, ease: 'power2.out' }, 1.5)
+  // Только базовая плашка: варианты --light/--map/--plan лежат на том же месте и включаются своими блоками
+  .to(['.header__actions', '.side-widget:not([class*="side-widget--"])'], { opacity: 1, duration: 0.8, ease: 'power2.out' }, 1.5)
   .fromTo('.scroll-btn', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, 2.2);
 
 if (reduceMotion) reveal.timeScale(4);
@@ -606,6 +607,8 @@ function buildMapTransition(tl) {
     .to([s3, closer], { opacity: 0, duration: 0.6, ease: 'power1.in' }, MAP.goneAt)
     .to(cast, { opacity: 0, duration: 0.3 }, MAP.goneAt)
     .fromTo($('#book'), { scale: 1 }, { scale: 0.94, duration: 0.6, ease: 'power1.in' }, MAP.goneAt)
+    // Растаявший альбом больше не рисуем: под картой он невидим, но браузер продолжал бы его отрисовывать
+    .set($('#book'), { visibility: 'hidden' }, MAP.goneAt + 0.65)
     // Блок карты: фон того же цвета, карта проступает сверху и ложится в перспективу
     .set(infra.root, { visibility: 'visible' }, MAP.tiltAt)
     .set($('.infra__bg', infra.root), { opacity: 1 }, MAP.tiltAt)
@@ -636,7 +639,9 @@ function buildPlanTransition(tl) {
     .to('.btn-burger', { backgroundColor: 'rgba(255, 255, 255, 0.1)', boxShadow: 'inset 0 0 0 1px #a7a7a7', duration: 0.5 }, p + 0.6)
     .to('.btn-burger span', { backgroundColor: '#ffffff', duration: 0.5 }, p + 0.6)
     .to('.side-widget--map', { opacity: 0, duration: 0.5 }, p + 0.6)
-    .to('.side-widget--plan', { opacity: 1, duration: 0.5 }, p + 0.6);
+    .to('.side-widget--plan', { opacity: 1, duration: 0.5 }, p + 0.6)
+    // Генплан закрыл экран целиком — 3D-карту под ним не рисуем
+    .set(infra.root, { visibility: 'hidden' }, PLAN_SETTLED);
 }
 
 /* ---------------- Переход: генплан → «Счастье в каждом кадре» ---------------- */
