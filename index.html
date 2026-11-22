@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ЭНСО — авторские кварталы на западе Москвы</title>
+  <link rel="preload" href="/fonts/OpiumNew-Regular.otf" as="font" type="font/otf" crossorigin />
+  <link rel="preload" href="/fonts/Gogol-Regular.otf" as="font" type="font/otf" crossorigin />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="is-loading">
+  <!-- Фоновый холст с карточками: стопка прелоадера → сетка Hero → фон историй -->
+  <div class="canvas" id="canvas" aria-hidden="true"></div>
+
+  <!-- Хедер -->
+  <header class="header">
+    <a class="logo" href="/" aria-label="ЭНСО"></a>
+    <div class="header__actions">
+      <a class="btn btn--dark" href="#request">Оставить заявку</a>
+      <button class="btn-burger" type="button" aria-label="Меню">
+        <span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Вертикальная плашка справа -->
+  <img class="side-widget" src="/img/e9c73.svg" width="40" height="92" alt="" />
+
+  <!-- Индикатор прогресса глав -->
+  <div class="progress" aria-hidden="true">
+    <span class="progress__done"></span>
+    <span class="progress__dot"><i></i></span>
+    <span class="progress__rest"></span>
+  </div>
+
+  <!-- Прелоадер -->
+  <div class="preloader" aria-hidden="true">
+    <span class="preloader__count">0</span>
+  </div>
+
+  <main>
+    <section class="story" id="story">
+      <div class="stage">
+        <!-- Экран 1: Hero -->
+        <div class="hero">
+          <div class="hero__block">
+            <ul class="tags tags--lg">
+              <li class="tag">5 мин до МЦД «Очаково»</li>
+              <li class="tag">Бизнес-класс</li>
+            </ul>
+            <h1 class="hero__title">
+              <span class="line"><span class="line__in">Авторские кварталы</span></span>
+              <span class="line"><span class="line__in">на западе Москвы</span></span>
+            </h1>
+          </div>
+          <div class="hero__script">
+            <!-- Контуры букв подставляет src/main.js (src/handwriting.js) -->
+            <p class="script script--drawn" role="img" aria-label="Основа для вашей истории" data-script="hero"></p>
+          </div>
+          <button class="scroll-btn" type="button">
+            <img src="/img/7c3a2.svg" width="20" height="20" alt="" />
+            <span>скролл</span>
+          </button>
+        </div>
+
+        <!-- Экран 2: Глава 1 -->
+        <article class="slide slide--1" data-source="r">
+          <div class="slide__media">
+            <img class="slide__img" src="/img/3f63f.webp" alt="Жилой комплекс ЭНСО вечером" />
+            <div class="slide__script">
+              <p class="script script--drawn" role="img" aria-label="Помнишь, как искали наши окна" data-script="slide1"></p>
+            </div>
+          </div>
+          <div class="slide__text">
+            <div class="slide__text-in">
+              <h2 class="slide__title">У каждой истории есть место, где все начиналось.</h2>
+              <ul class="tags">
+                <li class="tag tag--sm">Авторская архитектура</li>
+                <li class="tag tag--sm">Единый зелёный бульвар</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- Экран 3: Глава 2 -->
+        <article class="slide slide--2" data-source="rembrandt1">
+          <div class="slide__media">
+            <img class="slide__img" src="/img/c4499.webp" alt="Семья отдыхает дома" />
+            <div class="slide__script">
+              <p class="script script--drawn" role="img" aria-label="Уснули" data-script="slide2"></p>
+            </div>
+            <div class="slide__heart">
+              <div class="slide__heart-in" data-inline-svg="/img/17ed2.svg"></div>
+            </div>
+          </div>
+          <div class="slide__text">
+            <div class="slide__text-in">
+              <h2 class="slide__title">Место, где спокойно за самое дорогое.</h2>
+              <ul class="tags tags--wrap">
+                <li class="tag tag--sm">Звукоизоляция до 54 дБ</li>
+                <li class="tag tag--sm">Дворы без машин</li>
+                <li class="tag tag--sm">Видеонаблюдение во дворе</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- Экран 4: Глава 3 -->
+        <article class="slide slide--3" data-source="rembrandt2">
+          <div class="slide__media">
+            <img class="slide__img" src="/img/4888b.webp" alt="Прогулка по парку" />
+            <div class="slide__script">
+              <p class="script script--drawn" role="img" aria-label="Первая прогулка" data-script="slide3"></p>
+            </div>
+          </div>
+          <div class="slide__text">
+            <div class="slide__text-in">
+              <h2 class="slide__title">Здесь начинаются любимые маршруты</h2>
+              <ul class="tags tags--wrap">
+                <li class="tag tag--sm">Сад непрерывного цветения</li>
+                <li class="tag tag--sm">Террасы на стилобатах</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

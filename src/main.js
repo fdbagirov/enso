@@ -1,0 +1,443 @@
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Flip } from 'gsap/Flip';
+import Lenis from 'lenis';
+import { CARDS, IMAGES, buildCard } from './cards.js';
+import { SCRIPTS } from './handwriting.js';
+
+gsap.registerPlugin(ScrollTrigger, Flip);
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s, root = document) => root.querySelector(s);
+const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
+/* ---------------- Единицы макета ---------------- */
+// Позиции карточек растягиваются по вьюпорту (x — по ширине, y — по высоте),
+// размеры — по единому коэффициенту, чтобы карточки не наезжали на центр на 1440 и 1920.
+const sx = () => innerWidth / 1440;
+const sy = () => innerHeight / 900;
+const su = () => Math.min(sx(), sy());
+
+/* ---------------- Lenis ---------------- */
+const lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.9 });
+lenis.on('scroll', ScrollTrigger.update);
+gsap.ticker.add((time) => lenis.raf(time * 1000));
+gsap.ticker.lagSmoothing(0);
+lenis.stop();
+if (import.meta.env.DEV) window.__lenis = lenis;
+
+/* ---------------- Карточки ---------------- */
+const canvas = $('#canvas');
+const makeCard = (data) => {
+  const dom = buildCard(data);
+  canvas.append(dom.par);
+  return { data, ...dom };
+};
+const cards = CARDS.map(makeCard);
+
+// Сколько пикселей макета проезжает дорожка со скоростью 1 за одну единицу таймлайна
+const FLOW_PER_UNIT = 700;
+
+/* ---------------- Дорожки фона глав ---------------- */
+// В главах фото идут вертикальными дорожками, по две с каждой стороны. Внутри дорожки
+// у всех одна скорость, поэтому фото никогда не наезжают друг на друга; соседние дорожки
+// едут с разной скоростью — получается глубина. x и ширина — в пикселях макета 1440.
+const LANES = [
+  { x: -30, w: 120, speed: 0.72, phase: 0 },
+  { x: 128, w: 104, speed: 1, phase: 0.5 },
+  { x: 1118, w: 104, speed: 1, phase: 0.25 },
+  { x: 1262, w: 120, speed: 0.72, phase: 0.75 },
+];
+const PER_LANE = 6;
+const RING_PULL = 80; // насколько дорожки стягиваются к центру у верха и низа экрана (px макета)
+const MAX_CARD_H = 175; // ограничение высоты, чтобы между фото в дорожке оставался зазор
+const WRAP_PAD = 230;
+const laneLoop = () => innerHeight + 2 * WRAP_PAD * su();
+const WIDTH_PATTERN = [1, 0.82, 0.94, 0.78, 0.9, 0.86];
+
+function assignLanes() {
+  const ref = (c) => c.data.hero ?? c.data.story;
+  const cx = (c) => ref(c).x + ref(c).w / 2;
+  const order = (c) => (c.data.hero ? c.data.hero.y : 1000 + c.data.story.y);
+  const left = cards.filter((c) => cx(c) < 720).sort((a, b) => cx(a) - cx(b));
+  const right = cards.filter((c) => cx(c) >= 720).sort((a, b) => cx(a) - cx(b));
+  const lanes = [
+    left.slice(0, Math.ceil(left.length / 2)),
+    left.slice(Math.ceil(left.length / 2)),
+    right.slice(0, Math.floor(right.length / 2)),
+    right.slice(Math.floor(right.length / 2)),
+  ];
+  // Своих фото пока мало — добиваем дорожки повторами тех же снимков
+  let k = 0;
+  lanes.forEach((lane, li) => {
+    while (lane.length < PER_LANE) {
+      const src = cards[(k * 5 + li * 3) % CARDS.length].data;
+      const clone = makeCard({
+        id: `repeat-${k}`, layers: src.layers, flipped: src.flipped, hero: null,
+        story: { ...(src.hero ?? src.story) },
+      });
+      cards.push(clone);
+      lane.push(clone);
+      k += 1;
+    }
+    lane.sort((a, b) => order(a) - order(b));
+    lane.forEach((c, slot) => {
+      const r = ref(c);
+      Object.assign(c, {
+        lane: li, slot,
+        aspect: gsap.utils.clamp(0.5, 1.45, r.h / r.w),
+        wf: WIDTH_PATTERN[slot % WIDTH_PATTERN.length],
+      });
+    });
+  });
+}
+assignLanes();
+
+function laneRect(c) {
+  const lane = LANES[c.lane];
+  let w = lane.w * c.wf * su();
+  let h = w * c.aspect;
+  if (h > MAX_CARD_H * su()) {
+    h = MAX_CARD_H * su();
+    w = h / c.aspect;
+  }
+  const spacing = laneLoop() / PER_LANE;
+  return {
+    left: lane.x * sx() + (lane.w * su() - w) / 2,
+    top: -WRAP_PAD * su() + (c.slot + lane.phase) * spacing,
+    width: w,
+    height: h,
+  };
+}
+
+// Длина скролл-таймлайна в условных единицах: 0–1 — уход Hero, далее три главы.
+// Следующая глава стартует через 0.3 после ухода предыдущей — фото и тексты не пересекаются.
+const STORY_LENGTH = 6.8;
+const CHAPTERS = [
+  { enter: 0.55, exit: 2.5 },
+  { enter: 2.8, exit: 4.75 },
+  { enter: 5.05, exit: null },
+];
+const BORDER_ON = 'rgba(150, 122, 117, 1)';
+const BORDER_OFF = 'rgba(150, 122, 117, 0)';
+
+const rectOf = (s) => ({ left: s.x * sx(), top: s.y * sy(), width: s.w * su(), height: s.h * su() });
+
+function heroVars(c) {
+  const { hero, story } = c.data;
+  if (hero) {
+    // В Hero всё резко, как в макете; глубина резкости включается при уходе в фон глав
+    return { ...rectOf(hero), opacity: hero.o, filter: 'blur(0px)', borderColor: BORDER_ON };
+  }
+  // Карточки, которых нет в Hero, ждут своего места в дорожке чуть ниже и прозрачными
+  const r = laneRect(c);
+  return { ...r, top: r.top + 120 * su(), opacity: 0, filter: 'blur(4px)', borderColor: BORDER_OFF };
+}
+
+// В главах фото по бокам сохраняют разную прозрачность, как в Hero, — это и даёт глубину
+function storyVars(c) {
+  const o = (c.data.story ?? c.data.hero)?.o ?? 1;
+  return { ...laneRect(c), opacity: o, filter: 'blur(0px)', borderColor: BORDER_OFF };
+}
+
+// Значения-функции: пересчитываются ScrollTrigger'ом при ресайзе
+const lazy = (fn, keys = ['left', 'top', 'width', 'height', 'opacity', 'filter', 'borderColor']) =>
+  Object.fromEntries(keys.map((k) => [k, () => fn()[k]]));
+
+/* ---------------- Элементы ---------------- */
+const header = $('.header');
+const logo = $('.logo');
+const counter = $('.preloader__count');
+const heroLines = $$('.hero__title .line__in');
+const heroTags = $$('.hero .tag');
+const drawn = Object.fromEntries(
+  $$('.script--drawn').map((host) => [host.dataset.script, buildDrawnScript(host, SCRIPTS[host.dataset.script])]),
+);
+
+// Рукописная фраза как SVG из контуров букв: каждая буква — отдельный path
+function buildDrawnScript(host, data) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${data.width} ${data.height}`);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.style.width = `calc(var(--u) * ${data.width})`;
+  const paths = data.glyphs.map(({ d }) => {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    svg.append(p);
+    return p;
+  });
+  host.append(svg);
+  paths.forEach((p) => {
+    const len = p.getTotalLength();
+    p.dataset.len = len;
+    gsap.set(p, { strokeDasharray: `${len} ${len}`, strokeDashoffset: len });
+  });
+  return paths;
+}
+
+// «Trim path»: контур каждой буквы прорисовывается по очереди, следом буква заливается.
+// Длительность буквы пропорциональна длине контура, весь проход — одной плавной кривой.
+// lineStrokes — штрихи без заливки (сердечко): только прорисовываются и остаются.
+function makeDraw(paths, { total = 1.7, lineStrokes = [] } = {}) {
+  const inner = gsap.timeline({ paused: true });
+  let t = 0;
+  paths.forEach((p) => {
+    const d = Math.max(0.12, Number(p.dataset.len) / 900);
+    inner
+      .to(p, { strokeDashoffset: 0, duration: d, ease: 'none' }, t)
+      .to(p, { fillOpacity: 1, duration: d * 0.9, ease: 'power1.in' }, t + d * 0.45);
+    t += d * 0.62;
+  });
+  inner.to(paths, { strokeOpacity: 0, duration: 0.4 }, '>-0.1');
+  lineStrokes.forEach((p) => {
+    inner.to(p, { strokeDashoffset: 0, duration: Number(p.dataset.len) / 160, ease: 'power1.inOut' }, '>-0.35');
+  });
+  return gsap.to(inner, { progress: 1, duration: total, ease: 'power1.inOut', paused: true });
+}
+
+// Сердечко из макета (17ed2.svg) встраиваем как есть, чтобы прорисовать его штрих
+async function inlineSvgs() {
+  await Promise.all(
+    $$('[data-inline-svg]').map(async (host) => {
+      host.innerHTML = await fetch(host.dataset.inlineSvg).then((r) => r.text());
+      host.querySelectorAll('path').forEach((p) => {
+        const len = p.getTotalLength();
+        p.dataset.len = len;
+        gsap.set(p, { strokeDasharray: `${len} ${len}`, strokeDashoffset: len });
+      });
+    }),
+  );
+}
+
+gsap.set(heroLines, { y: 0, yPercent: 110 });
+gsap.set(heroTags, { opacity: 0, y: 16 });
+gsap.set(['.header__actions', '.side-widget', '.scroll-btn'], { opacity: 0 });
+document.body.classList.remove('is-loading');
+document.body.style.overflow = 'hidden';
+
+/* ---------------- Прелоадер: стопка ---------------- */
+const stackCards = cards.filter((c) => c.data.hero);
+const rnd = gsap.utils.random;
+
+// Крупный логотип и стопка — оба по центру экрана
+function preloaderLayout() {
+  const cy = innerHeight / 2;
+  return { logoW: Math.min(innerWidth * 0.56, 860), logoCy: cy, stackW: 230 * su(), stackH: 300 * su(), stackCy: cy };
+}
+
+function layoutStack() {
+  const { stackW: w, stackH: h, stackCy } = preloaderLayout();
+  const cx = innerWidth / 2;
+  stackCards.forEach((c, i) => {
+    gsap.set(c.el, {
+      left: cx - w / 2 + rnd(-14, 14) * su(),
+      top: stackCy - h / 2 + rnd(-10, 10) * su(),
+      width: w,
+      height: h,
+      rotation: rnd(-10, 10),
+      zIndex: i + 1,
+      opacity: 0,
+      borderColor: BORDER_ON,
+      filter: 'blur(0px)',
+    });
+  });
+}
+
+function logoStartVars() {
+  const { logoW, logoCy } = preloaderLayout();
+  return { y: logoCy - 40, scale: logoW / 151 }; // 40 — центр логотипа в хедере
+}
+
+layoutStack();
+gsap.set(logo, { ...logoStartVars(), opacity: 0 });
+
+/* ---------------- Загрузка ---------------- */
+// Проценты = сколько фото уже легло в стопку: 100% ровно на последнем фото.
+// Если сеть медленнее анимации, счётчик не обгоняет реальную загрузку.
+const progress = { deal: 0, load: 0 };
+const renderCount = () => (counter.textContent = `${Math.round(Math.min(progress.deal, progress.load))}%`);
+let loaded = 0;
+const loadImages = Promise.all(
+  IMAGES.map(
+    (src) =>
+      new Promise((resolve) => {
+        const image = new Image();
+        image.onload = image.onerror = () => {
+          loaded += 1;
+          progress.load = (loaded / IMAGES.length) * 100;
+          renderCount();
+          resolve();
+        };
+        image.src = src;
+      }),
+  ),
+);
+
+// Как в референсе Codrops: фото «выкладываются» на стопку по одному — сразу непрозрачные,
+// без растворения, каждое успевает считаться. Видны только три верхних, остальные — под ними.
+const DEAL_STEP = 0.17;
+const DEAL_START = 0.35;
+const lastDeal = DEAL_START + (stackCards.length - 1) * DEAL_STEP;
+const intro = gsap.timeline();
+intro
+  .to(logo, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 0.1)
+  .fromTo(progress, { deal: 0 }, { deal: 100, duration: lastDeal - DEAL_START + 0.01, ease: 'none', onUpdate: renderCount }, DEAL_START);
+stackCards.forEach((c, i) => {
+  const at = DEAL_START + i * DEAL_STEP;
+  intro
+    .set(c.el, { opacity: 1 }, at)
+    .fromTo(c.el, { scale: 1.06 }, { scale: 1, duration: 0.3, ease: 'power3.out' }, at);
+  if (i < stackCards.length - 3) intro.set(c.el, { opacity: 0 }, at + DEAL_STEP * 3);
+});
+if (reduceMotion) intro.progress(1);
+renderCount();
+
+await Promise.all([loadImages, document.fonts.ready, inlineSvgs(), intro.then()]);
+renderCount();
+/* ---------------- Распад стопки → Hero (GSAP Flip) ---------------- */
+// Стопка разлетается сразу, как только легло последнее фото и счётчик дошёл до 100%
+const reveal = gsap.timeline({ delay: 0.12 });
+const stackEls = stackCards.map((c) => c.el);
+// Спрятанные под верхними фото карточки возвращаем в колоду непрозрачными — разлетаются все
+gsap.set(stackEls, { opacity: 1 });
+const flipState = Flip.getState(stackEls, { props: 'opacity,filter' });
+stackCards.forEach((c) => gsap.set(c.el, { ...heroVars(c), rotation: 0, zIndex: 'auto' }));
+cards.filter((c) => !c.data.hero).forEach((c) => gsap.set(c.el, heroVars(c)));
+
+reveal
+  .to(counter, { opacity: 0, duration: 0.4 }, 0)
+  .add(
+    Flip.from(flipState, {
+      duration: 1.6,
+      ease: 'expo.inOut',
+      stagger: { each: 0.035, from: 'end' },
+    }),
+    0,
+  )
+  .to(logo, { y: 0, scale: 1, duration: 1.6, ease: 'expo.inOut' }, 0.05)
+  .to(heroTags, { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out' }, 1.15)
+  .to(heroLines, { yPercent: 0, duration: 1.2, stagger: 0.12, ease: 'expo.out' }, 1.2)
+  .call(() => makeDraw(drawn.hero).play(), null, 1.6)
+  .to(['.header__actions', '.side-widget'], { opacity: 1, duration: 0.8, ease: 'power2.out' }, 1.5)
+  .fromTo('.scroll-btn', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, 2.2);
+
+if (reduceMotion) reveal.timeScale(4);
+await reveal.then();
+
+document.body.style.overflow = '';
+lenis.start();
+const story = buildStory();
+if (import.meta.env.DEV) window.__story = story;
+
+$('.scroll-btn').addEventListener('click', () => {
+  const st = story.scrollTrigger;
+  lenis.scrollTo(st.start + (st.end - st.start) * ((CHAPTERS[0].enter + 1) / STORY_LENGTH), { duration: 1.8 });
+});
+
+/* ---------------- Скролл-повествование ---------------- */
+// Фон как в Getty: фото по бокам непрерывно текут вверх, ушедшие за верх возвращаются снизу.
+// «Барабан»: у середины экрана фото ближе и крупнее, к краям уходят вглубь и к краю экрана.
+function updateFlow(time) {
+  const vw = innerWidth;
+  const strength = gsap.utils.clamp(0, 1, time); // 0 — ровно макет Hero, 1 — режим глав
+  const min = -WRAP_PAD * su();
+  const loop = laneLoop();
+  cards.forEach((c) => {
+    const top = gsap.getProperty(c.el, 'top');
+    const left = gsap.getProperty(c.el, 'left');
+    const w = gsap.getProperty(c.el, 'width');
+    const h = gsap.getProperty(c.el, 'height');
+    const flow = time * FLOW_PER_UNIT * su() * LANES[c.lane].speed;
+    const screenTop = gsap.utils.wrap(min, min + loop, top - flow);
+    // Кольцо вокруг центра, как в Getty: на середине высоты фото дальше всего от центра,
+    // к верху и низу дорожки стягиваются к центру по дуге окружности
+    const v = gsap.utils.clamp(-1, 1, ((screenTop + h / 2) / innerHeight - 0.5) * 2);
+    const arc = 1 - Math.sqrt(1 - v * v); // 0 на середине, 1 у верхнего и нижнего края
+    const side = left + w / 2 < vw / 2 ? 1 : -1; // направление к центру экрана
+    gsap.set(c.par, { y: screenTop - top });
+    gsap.set(c.el, {
+      x: side * strength * RING_PULL * su() * arc,
+      scale: 1 - strength * 0.05 * arc,
+    });
+  });
+}
+function buildStory() {
+  const tl = gsap.timeline({
+    defaults: { ease: 'none' },
+    onUpdate: () => updateFlow(tl.time()),
+    scrollTrigger: {
+      trigger: '#story',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 0.6,
+      invalidateOnRefresh: true,
+    },
+  });
+
+  // Фон: Hero-сетка перестраивается в раскладку глав (поток вверх добавляет updateFlow)
+  cards.forEach((c) => {
+    tl.fromTo(c.el, lazy(() => heroVars(c)), { ...lazy(() => storyVars(c)), duration: 1, ease: 'power2.inOut' }, 0);
+  });
+
+  // Hero уезжает вверх, логотип освобождает центр
+  tl.to('.hero__block', { y: () => -260 * su(), opacity: 0, duration: 0.5, ease: 'power1.in' }, 0)
+    .to('.hero__script', { y: () => -220 * su(), opacity: 0, duration: 0.5, ease: 'power1.in' }, 0)
+    .to('.scroll-btn', { opacity: 0, y: 20, duration: 0.3 }, 0)
+    .to(logo, { x: () => -(header.clientWidth / 2 - 75.5 - 24), duration: 0.8, ease: 'power2.inOut' }, 0.05)
+    // Непрозрачный эквивалент rgba(67,33,0,.07) на фоне #fdf1e5 — чтобы карточки не просвечивали под кнопкой
+    .to('.btn-burger', { backgroundColor: '#f0e2d5', duration: 0.6 }, 0.1)
+    .to('.progress', { opacity: 1, duration: 0.3 }, 0.7)
+    .to('.progress__done', { width: () => 109 * su(), duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[1].enter)
+    .to('.progress__done', { width: () => 176 * su(), duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[2].enter);
+
+  const medias = [];
+  $$('.slide').forEach((slide, i) => {
+    const { enter, exit } = CHAPTERS[i];
+    const media = $('.slide__media', slide);
+    const image = $('.slide__img', slide);
+    const title = $('.slide__title', slide);
+    const tags = $$('.tag', slide);
+    const glyphs = drawn[`slide${i + 1}`];
+    const heart = $$('.slide__heart-in path', slide);
+    const draw = makeDraw(glyphs, { total: 1.3, lineStrokes: heart });
+    // В макете фото третьей главы отзеркалено по горизонтали
+    const mirror = slide.classList.contains('slide--3') ? -1 : 1;
+    gsap.set(image, { rotation: 0, scaleX: mirror, scaleY: 1 });
+    medias.push(media);
+
+    // Фото выезжает снизу, как при обычной прокрутке, и встаёт в центр
+    tl.fromTo(media, { y: () => innerHeight - media.offsetTop + 40 * su() }, { y: 0, duration: 0.8, ease: 'power2.out' }, enter)
+      .fromTo(
+        image,
+        { scaleX: 1.12 * mirror, scaleY: 1.12 },
+        { scaleX: mirror, scaleY: 1, duration: 1.2, ease: 'power1.out' },
+        enter,
+      )
+      .fromTo(title, { y: () => 160 * su(), opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' }, enter + 0.7)
+      .fromTo(
+        tags,
+        { y: () => 120 * su(), opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.05, ease: 'power2.out' },
+        enter + 0.8,
+      )
+      // Рукопись на фото пишется по trim path, когда фото уже встало: вперёд — играет, назад — сбрасывается
+      .call(() => (tl.scrollTrigger?.direction === -1 ? draw.pause(0) : draw.restart()), null, enter + 0.8);
+
+    if (exit !== null) {
+      // Глава уезжает вверх, освобождая место следующей, которая поднимается снизу
+      // Глава уезжает вверх одним блоком: текст едет следом за фото, как при обычной прокрутке.
+      // Следующее фото выходит снизу уже за текстом, поэтому ничего не перекрывается.
+      tl.to([media, $('.slide__text', slide)], { y: () => -(innerHeight + 40 * su()), duration: 0.8, ease: 'power1.in' }, exit);
+    }
+  });
+
+  // До запуска истории фото глав спрятаны CSS-ом; теперь они стоят за нижним краем
+  gsap.set(medias, { opacity: 1 });
+  tl.to({}, { duration: 0.01 }, STORY_LENGTH - 0.01);
+  updateFlow(tl.time());
+  return tl;
+}
