@@ -4,6 +4,8 @@ import { Flip } from 'gsap/Flip';
 import Lenis from 'lenis';
 import { CARDS, IMAGES, buildCard } from './cards.js';
 import { SCRIPTS } from './handwriting.js';
+import { buildBook } from './book.js';
+import { addAmbient, startAmbient, hoverEnabled } from './ambient.js';
 
 gsap.registerPlugin(ScrollTrigger, Flip);
 
@@ -113,9 +115,18 @@ function laneRect(c) {
   };
 }
 
-// Длина скролл-таймлайна в условных единицах: 0–1 — уход Hero, далее три главы.
+// Длина скролл-таймлайна в условных единицах: 0–1 — уход Hero, далее три главы,
+// потом фото третьей главы раскрывается на весь экран и превращается в альбом из трёх разворотов.
 // Следующая глава стартует через 0.3 после ухода предыдущей — фото и тексты не пересекаются.
-const STORY_LENGTH = 6.8;
+const STORY_LENGTH = 14.2;
+const ZOOM = { at: 6.6, d: 1.3 }; // фото главы 3 → видео на весь экран (как в Getty)
+const ZOOM_END = ZOOM.at + ZOOM.d; // отсюда видео играет, а разворот 01 проявляется сам
+let spreadIntro; // появление разворота 01 — по времени, не по скроллу
+let introShown = false;
+const FLIPS = [ // перелистывания 01 → 02 → 03
+  { at: 9.4, d: 1.6 },
+  { at: 11.8, d: 1.6 },
+];
 const CHAPTERS = [
   { enter: 0.55, exit: 2.5 },
   { enter: 2.8, exit: 4.75 },
@@ -330,8 +341,10 @@ await reveal.then();
 
 document.body.style.overflow = '';
 lenis.start();
+const book = buildBook($('#book'));
 const story = buildStory();
-if (import.meta.env.DEV) window.__story = story;
+setupAmbient();
+if (import.meta.env.DEV) Object.assign(window, { __story: story, __book: book });
 
 $('.scroll-btn').addEventListener('click', () => {
   const st = story.scrollTrigger;
@@ -365,10 +378,39 @@ function updateFlow(time) {
     });
   });
 }
+// Видео разворота играет только пока его видно (или пока его страница переворачивается).
+// Видео с велосипедистом стоит на первом кадре (тот же кадр, что фото главы 3), пока фото
+// раскрывается, и запускается, только когда мы уже на развороте «Знакомые места».
+function updateBook(t) {
+  const [f1, f2] = FLIPS;
+  const want = [
+    t >= ZOOM_END && t < f1.at + f1.d,
+    t > f1.at - 0.4 && t < f2.at + f2.d,
+    t > f2.at - 0.4,
+  ];
+  book.videos.forEach((v, i) => {
+    if (want[i] && v.paused) v.play().catch(() => {});
+    else if (!want[i] && !v.paused) v.pause();
+  });
+  if (t < ZOOM_END && book.videos[0].currentTime > 0) book.videos[0].currentTime = 0;
+
+  // Тексты и коллаж первого разворота не привязаны к скроллу: появляются сами, когда видео раскрылось
+  const show = t >= ZOOM_END - 0.05;
+  if (show !== introShown) {
+    introShown = show;
+    if (show) spreadIntro?.play();
+    else spreadIntro?.reverse();
+  }
+  book.setActiveLeaf(FLIPS.findIndex((f) => t >= f.at && t <= f.at + f.d));
+}
+
 function buildStory() {
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
-    onUpdate: () => updateFlow(tl.time()),
+    onUpdate: () => {
+      updateFlow(tl.time());
+      updateBook(tl.time());
+    },
     scrollTrigger: {
       trigger: '#story',
       start: 'top top',
@@ -404,19 +446,15 @@ function buildStory() {
     const glyphs = drawn[`slide${i + 1}`];
     const heart = $$('.slide__heart-in path', slide);
     const draw = makeDraw(glyphs, { total: 1.3, lineStrokes: heart });
-    // В макете фото третьей главы отзеркалено по горизонтали
-    const mirror = slide.classList.contains('slide--3') ? -1 : 1;
-    gsap.set(image, { rotation: 0, scaleX: mirror, scaleY: 1 });
+    // Фото третьей главы — первый кадр видео; оно останавливается на том же масштабе 1.04,
+    // что и видео разворота, чтобы при раскрытии на весь экран кадр не прыгал
+    const rest = slide.classList.contains('slide--3') ? 1.04 : 1;
+    gsap.set(image, { rotation: 0, scale: rest });
     medias.push(media);
 
     // Фото выезжает снизу, как при обычной прокрутке, и встаёт в центр
     tl.fromTo(media, { y: () => innerHeight - media.offsetTop + 40 * su() }, { y: 0, duration: 0.8, ease: 'power2.out' }, enter)
-      .fromTo(
-        image,
-        { scaleX: 1.12 * mirror, scaleY: 1.12 },
-        { scaleX: mirror, scaleY: 1, duration: 1.2, ease: 'power1.out' },
-        enter,
-      )
+      .fromTo(image, { scale: 1.12 * rest }, { scale: rest, duration: 1.2, ease: 'power1.out' }, enter)
       .fromTo(title, { y: () => 160 * su(), opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' }, enter + 0.7)
       .fromTo(
         tags,
@@ -437,7 +475,120 @@ function buildStory() {
 
   // До запуска истории фото глав спрятаны CSS-ом; теперь они стоят за нижним краем
   gsap.set(medias, { opacity: 1 });
+  buildAlbum(tl);
   tl.to({}, { duration: 0.01 }, STORY_LENGTH - 0.01);
   updateFlow(tl.time());
+  updateBook(tl.time());
   return tl;
+}
+
+/* ---------------- Альбом «Локация» ---------------- */
+function buildAlbum(tl) {
+  const root = $('#book');
+  const [s0, s1, s2] = book.spreads;
+  const slide3 = $('.slide--3');
+  const photo3 = $('.slide__media', slide3);
+  const bg0 = $('.spread__bg', s0);
+  const stageW = () => root.clientWidth;
+  const stageH = () => root.clientHeight;
+
+  // Пока идут главы, альбом спрятан; следующие развороты ждут своего перелистывания
+  gsap.set([s1, s2], { visibility: 'hidden' });
+  tl.set(root, { visibility: 'visible' }, ZOOM.at);
+
+  /* Фото главы 3 растёт до размеров экрана и становится видео с велосипедистом.
+     Видео сразу встаёт ровно в рамку фото (то же кадрирование и зеркало) и проявляется поверх,
+     затем рамка расширяется на весь экран — как раскрытие картины в Getty Tracing Art. */
+  const z = ZOOM.at;
+  const photoRect = (k) => () => {
+    const r = { left: photo3.offsetLeft, top: photo3.offsetTop, width: photo3.offsetWidth, height: photo3.offsetHeight };
+    return r[k];
+  };
+  tl.fromTo(
+    bg0,
+    { left: photoRect('left'), top: photoRect('top'), width: photoRect('width'), height: photoRect('height'), opacity: 0 },
+    { left: 0, top: 0, width: stageW, height: stageH, duration: ZOOM.d, ease: 'expo.inOut' },
+    z,
+  )
+    .to(bg0, { opacity: 1, duration: 0.15 }, z)
+    .fromTo($('.spread__veil', s0), { opacity: 0 }, { opacity: 1, duration: ZOOM.d, ease: 'power1.inOut' }, z + 0.2)
+    .set(photo3, { visibility: 'hidden' }, z + 0.35)
+    // Всё вокруг фото расступается
+    .to([$('.slide__title', slide3), ...$$('.tag', slide3)], { opacity: 0, y: () => 40 * su(), duration: 0.4, ease: 'power1.in' }, z)
+    .to('.canvas', { opacity: 0, duration: 0.8, ease: 'power1.in' }, z)
+    .to('.progress', { opacity: 0, duration: 0.3 }, z)
+    // Хедер и плашка становятся светлыми, как в макете разворотов
+    .to(logo, { backgroundColor: '#fff', duration: 0.5 }, z + 0.6)
+    .to('.btn--dark', { backgroundColor: '#fff', color: '#422f2c', duration: 0.5 }, z + 0.6)
+    .to('.btn-burger', { backgroundColor: 'rgba(255, 255, 255, 0.12)', duration: 0.5 }, z + 0.6)
+    .to('.btn-burger span', { backgroundColor: '#fff', duration: 0.5 }, z + 0.6)
+    .to('.side-widget:not(.side-widget--light)', { opacity: 0, duration: 0.5 }, z + 0.6)
+    .to('.side-widget--light', { opacity: 1, duration: 0.5 }, z + 0.6);
+
+  /* Первый разворот: тексты и коллаж просто проявляются сами, по времени, а не по скроллу.
+     Прокрутили назад до раскрытия — так же сами исчезают. */
+  const c0 = $('.spread__content', s0);
+  gsap.set(c0, { opacity: 0 });
+  spreadIntro = gsap.to(c0, { opacity: 1, duration: 0.7, ease: 'power1.out', paused: true });
+
+  /* Перелистывание: правая страница поворачивается вокруг корешка и ложится налево.
+     Под ней открывается правая страница следующего разворота, на обороте листа — его левая страница. */
+  FLIPS.forEach(({ at, d }, i) => {
+    const from = book.spreads[i];
+    const to = book.spreads[i + 1];
+    const { el: leaf, shades: [front, back] } = book.leaves[i];
+    tl.set(to, { visibility: 'visible' }, at)
+      .set(leaf, { visibility: 'visible' }, at)
+      .set(from, { clipPath: 'inset(0% 50% 0% 0%)' }, at)
+      .fromTo(leaf, { rotationY: 0 }, { rotationY: -180, duration: d, ease: 'power2.inOut' }, at)
+      // Лист чуть приподнимается над разворотом в середине оборота
+      .fromTo(leaf, { z: 0 }, { z: () => 70 * su(), duration: d / 2, ease: 'sine.out', yoyo: true, repeat: 1 }, at)
+      // Свет: лицевая сторона темнеет, уходя от зрителя, оборот светлеет, ложась на страницу
+      .fromTo(front, { opacity: 0 }, { opacity: 0.9, duration: d / 2, ease: 'power1.in' }, at)
+      .fromTo(back, { opacity: 0.9 }, { opacity: 0, duration: d / 2, ease: 'power1.out' }, at + d / 2)
+      // Тень от листа на открывающейся правой странице
+      .fromTo(book.cast, { opacity: 0 }, { opacity: 1, duration: d * 0.2, ease: 'power1.out' }, at)
+      .to(book.cast, { opacity: 0, duration: d * 0.55, ease: 'power1.in' }, at + d * 0.3)
+      .set(leaf, { visibility: 'hidden' }, at + d)
+      .set(from, { visibility: 'hidden' }, at + d);
+  });
+}
+
+/* ---------------- Живой коллаж: мышь + покачивание ---------------- */
+function setupAmbient() {
+  // Фон истории: чем непрозрачнее (ближе) карточка, тем сильнее она реагирует
+  cards.forEach((c, i) => {
+    const o = (c.data.story ?? c.data.hero)?.o ?? 1;
+    addAmbient(c.el, {
+      amp: 6 + 16 * o,
+      rot: 0.3 + 0.7 * o,
+      idle: { y: 3 + 2 * o, r: 0.5, duration: 4.5 + (i % 4) * 0.5, phase: (i * 0.37) % 1 },
+    });
+  });
+  // Фото глав — на среднем плане; тексты неподвижны ради читаемости
+  $$('.slide__media').forEach((m, i) => addAmbient(m, { amp: 10, rot: 0.35, idle: { y: 3, r: 0.25, duration: 5.5, phase: i * 0.3 } }));
+
+  // Развороты: двигаются только две фотографии и карточка-стикер, фон и тексты неподвижны.
+  // Цели — оригинал и его копии на переворачиваемых листах.
+  const all = (key) => $$(`[data-amb="${key}"]`);
+  [0, 1, 2].forEach((s) => {
+    addAmbient(all(`s${s}-main`), { amp: 15, rot: 0.8, idle: { y: 5, r: 0.6, duration: 5.6, phase: 0 } });
+    addAmbient(all(`s${s}-second`), { amp: 25, rot: 1.5, idle: { y: 5, r: 0.6, duration: 4.8, phase: 0.5 } });
+    addAmbient(all(`s${s}-sticker`), { amp: 35, rot: 2, idle: { y: 5, r: 0.6, duration: 6, phase: 0.25 } });
+  });
+  startAmbient(su);
+
+  // Стикер приподнимается под курсором
+  if (!hoverEnabled) return;
+  book.spreads.forEach((spread) => {
+    const sticker = $('[data-role="sticker"] .sticker', spread);
+    sticker.addEventListener('mouseenter', () => {
+      sticker.classList.add('is-lifted');
+      gsap.to(sticker, { scale: 1.03, duration: 0.5, ease: 'power3.out' });
+    });
+    sticker.addEventListener('mouseleave', () => {
+      sticker.classList.remove('is-lifted');
+      gsap.to(sticker, { scale: 1, duration: 0.6, ease: 'power3.out' });
+    });
+  });
 }

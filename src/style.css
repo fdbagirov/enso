@@ -1,3 +1,4 @@
+@import '@fontsource/golos-text/400.css';
 @import '@fontsource/golos-text/500.css';
 @import 'lenis/dist/lenis.css';
 
@@ -175,7 +176,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 }
 
 /* ---------- Сцена истории ---------- */
-.story { position: relative; height: 820vh; }
+.story { position: relative; height: 1700vh; }
 .stage {
   position: sticky;
   top: 0;
@@ -408,12 +409,14 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   width: calc(630 * var(--u));
   height: calc(402 * var(--u));
 }
+/* Первый кадр видео с велосипедистом: кадрируется так же, как видео (cover),
+   поэтому при раскрытии на весь экран фото и видео совпадают кадр в кадр */
 .slide--3 .slide__img {
-  left: calc(-50 * var(--u));
-  top: calc(-16 * var(--u));
-  width: calc(731 * var(--u));
-  height: calc(418 * var(--u));
-  /* зеркалирование по горизонтали (как в макете) задаётся из JS через scaleX: -1 */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .slide--3 .slide__script {
   left: calc(329 * var(--u));
@@ -445,6 +448,235 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .progress__dot { flex: none; padding: 0 4px; background: var(--bg); display: flex; }
 .progress__dot i { width: 12px; height: 12px; border-radius: 58px; background: var(--ink); }
 .progress__rest { flex: 1 0 0; height: 2px; background: var(--line-soft); }
+
+/* ---------- Альбом «Локация» ---------- */
+.side-widget--light {
+  opacity: 0;
+  background: none;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.book {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  perspective: 2600px;
+  visibility: hidden;
+  pointer-events: none;
+}
+.spread {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: #fff;
+}
+.spread--1 { z-index: 3; }
+.spread--2 { z-index: 2; }
+.spread--3 { z-index: 1; }
+.spread__bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+/* Запас 4%, чтобы при параллаксе от мыши не показывались края */
+.spread__bg-in { position: absolute; inset: 0; transform: scale(1.04); }
+.spread__video,
+.spread__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.is-mirror { transform: scaleX(-1); }
+.spread__veil { position: absolute; inset: 0; background: rgba(0, 0, 0, var(--dim)); }
+.spread__content { position: absolute; inset: 0; }
+
+/* Позиция по макету 1440×900 относительно центра разворота (корешка) */
+.pos {
+  position: absolute;
+  left: calc(50% + (var(--x) - 720) * var(--u));
+  top: calc(50% + (var(--y) - 450) * var(--u));
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h) * var(--u));
+  margin: 0;
+}
+.sp-title {
+  margin: 0;
+  font: 400 calc(60 * var(--u)) / calc(56 * var(--u)) var(--serif);
+  letter-spacing: calc(-0.6 * var(--u));
+}
+.sp-line { display: block; }
+/* --x буквицы — её центр, как в макете; ширина фиксированная, чтобы не трогать transform */
+.sp-cap {
+  display: block;
+  width: calc(100 * var(--u));
+  margin-left: calc(-50 * var(--u));
+  text-align: center;
+  font: 400 calc(125.599 * var(--u)) / calc(87.981 * var(--u)) var(--script);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.sp-lead { font: 400 calc(20 * var(--u)) / calc(26 * var(--u)) var(--sans); }
+.sp-list li {
+  position: relative;
+  padding-left: calc(28 * var(--u));
+  font: 400 calc(16 * var(--u)) / calc(32 * var(--u)) var(--sans);
+}
+.sp-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: calc(15 * var(--u));
+  width: calc(17 * var(--u));
+  height: calc(4 * var(--u));
+  background: url('/img/loc/acebf.svg') center / 100% 100% no-repeat;
+}
+.sp-count {
+  position: absolute;
+  left: calc(24 * var(--u));
+  bottom: calc(24 * var(--u));
+  display: flex;
+  flex-direction: column;
+  font: 400 calc(56 * var(--u)) / calc(52 * var(--u)) var(--serif);
+  letter-spacing: calc(-0.56 * var(--u));
+}
+.sp-count span:last-child { opacity: 0.4; }
+
+.collage-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.collage-item-inner { flex: none; transform: rotate(var(--rot, 0deg)); }
+.collage-item-inner.photo { width: 100%; height: 100%; }
+.photo {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.05), 0 3px 0.5px rgba(0, 0, 0, 0.01);
+}
+.photo--tint { background: rgba(0, 0, 0, 0.04); }
+.photo--white { background: #fff; }
+.photo__crop { position: absolute; inset: 0; overflow: hidden; }
+.photo__crop img { position: absolute; max-width: none; }
+.photo__cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+.photo__cover--bottom { object-position: 50% 100%; }
+
+.sticker {
+  position: relative;
+  box-shadow: 0 calc(8.2 * var(--u)) calc(4.1 * var(--u)) rgba(0, 0, 0, 0.05),
+    0 calc(24.6 * var(--u)) calc(4.1 * var(--u)) rgba(0, 0, 0, 0.01);
+  transition: box-shadow .5s cubic-bezier(.22, 1, .36, 1);
+}
+.sticker--blue { background: #dde5ef; color: #314968; }
+.sticker--sand { background: #f0e2d5; color: var(--ink); }
+.sticker__hw {
+  position: absolute;
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h) * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%) rotate(var(--r));
+  font: 400 calc(var(--fs) * var(--u)) / calc(var(--lh) * var(--u)) var(--script);
+  letter-spacing: calc(var(--ls) * var(--u));
+  white-space: nowrap;
+}
+.sticker__note {
+  position: absolute;
+  right: calc(var(--right) * var(--u));
+  bottom: calc(var(--bottom) * var(--u));
+  width: calc(var(--w) * var(--u));
+  font: 400 calc(16 * var(--u)) / calc(20 * var(--u)) var(--sans);
+  letter-spacing: calc(-0.32 * var(--u));
+  text-align: right;
+}
+.sticker__dot { position: absolute; max-width: none; }
+/* Стикер чуть приподнимается под курсором */
+.book [data-role='sticker'] .sticker { pointer-events: auto; }
+.sticker.is-lifted {
+  box-shadow: 0 calc(14 * var(--u)) calc(18 * var(--u)) rgba(0, 0, 0, 0.14),
+    0 calc(30 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, 0.06);
+}
+
+.spread__spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 44 * var(--u));
+  width: calc(88 * var(--u));
+  opacity: 0.2;
+  background: linear-gradient(90deg, rgba(255, 252, 245, 0) 0%, rgba(255, 252, 245, 0.14) 25%,
+    rgba(255, 252, 245, 0.58) 48.1%, rgba(255, 252, 245, 0.64) 49.6%, rgba(102, 74, 54, 0.13) 50.7%,
+    rgba(115, 85, 63, 0.075) 56%, rgba(115, 85, 63, 0.028) 76%, rgba(115, 85, 63, 0) 100%);
+}
+
+/* Переворачиваемый лист: правая страница поворачивается вокруг корешка */
+.leaf {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  z-index: 10;
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+  visibility: hidden;
+}
+.leaf__face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.leaf__back { transform: rotateY(180deg); }
+.leaf__face > .spread { width: 200%; z-index: auto; pointer-events: none; }
+.leaf__front > .spread { left: -100%; }
+/* Копия разворота на листе всегда в финальном виде, независимо от анимаций оригинала */
+.leaf .spread__bg { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; }
+.leaf__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+}
+.leaf__front .leaf__shade {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25) 35%, rgba(0, 0, 0, 0.4));
+}
+.leaf__back .leaf__shade {
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.2) 35%, rgba(0, 0, 0, 0.35));
+}
+/* Тень, которую лист отбрасывает на открывающуюся правую страницу */
+.book__cast {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  z-index: 9;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0) 85%);
+}
 
 /* Стартовое состояние до прелоадера */
 .is-loading .header__actions,

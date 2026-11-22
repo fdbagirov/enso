@@ -72,7 +72,7 @@ export const CARDS = [
 export const IMAGES = [
   ...new Set([
     ...CARDS.flatMap((c) => c.layers.map((l) => l.src)),
-    img('3f63f'), img('c4499'), img('4888b'),
+    img('3f63f'), img('c4499'), '/img/loc/cyclist-frame0.webp',
   ]),
 ];
 
