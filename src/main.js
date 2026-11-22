@@ -402,6 +402,7 @@ function updateBook(t) {
     else spreadIntro?.reverse();
   }
   book.setActiveLeaf(FLIPS.findIndex((f) => t >= f.at && t <= f.at + f.d));
+  FLIPS.forEach((f, i) => book.renderLeaf(i, gsap.utils.clamp(0, 1, (t - f.at) / f.d)));
 }
 
 function buildStory() {
@@ -531,21 +532,16 @@ function buildAlbum(tl) {
   gsap.set(c0, { opacity: 0 });
   spreadIntro = gsap.to(c0, { opacity: 1, duration: 0.7, ease: 'power1.out', paused: true });
 
-  /* Перелистывание: правая страница поворачивается вокруг корешка и ложится налево.
-     Под ней открывается правая страница следующего разворота, на обороте листа — его левая страница. */
+  /* Перелистывание: мягкая правая страница изгибается и ложится налево через корешок
+     (изгиб и свет полос считает book.renderLeaf в updateBook). Под ней открывается правая
+     страница следующего разворота, на обороте листа — его левая страница. */
   FLIPS.forEach(({ at, d }, i) => {
     const from = book.spreads[i];
     const to = book.spreads[i + 1];
-    const { el: leaf, shades: [front, back] } = book.leaves[i];
+    const { el: leaf } = book.leaves[i];
     tl.set(to, { visibility: 'visible' }, at)
       .set(leaf, { visibility: 'visible' }, at)
       .set(from, { clipPath: 'inset(0% 50% 0% 0%)' }, at)
-      .fromTo(leaf, { rotationY: 0 }, { rotationY: -180, duration: d, ease: 'power2.inOut' }, at)
-      // Лист чуть приподнимается над разворотом в середине оборота
-      .fromTo(leaf, { z: 0 }, { z: () => 70 * su(), duration: d / 2, ease: 'sine.out', yoyo: true, repeat: 1 }, at)
-      // Свет: лицевая сторона темнеет, уходя от зрителя, оборот светлеет, ложась на страницу
-      .fromTo(front, { opacity: 0 }, { opacity: 0.9, duration: d / 2, ease: 'power1.in' }, at)
-      .fromTo(back, { opacity: 0.9 }, { opacity: 0, duration: d / 2, ease: 'power1.out' }, at + d / 2)
       // Тень от листа на открывающейся правой странице
       .fromTo(book.cast, { opacity: 0 }, { opacity: 1, duration: d * 0.2, ease: 'power1.out' }, at)
       .to(book.cast, { opacity: 0, duration: d * 0.55, ease: 'power1.in' }, at + d * 0.3)

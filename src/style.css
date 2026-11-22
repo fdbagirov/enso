@@ -640,16 +640,30 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   transform-style: preserve-3d;
   visibility: hidden;
 }
+/* Мягкий лист: цепочка полос-шарниров, каждая вложена в предыдущую и стоит у её правого края */
+.strip {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+}
+.strip--root { left: 0; width: calc(100% / 14); }
 .leaf__face {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  /* +1px перекрытия, чтобы между полосами не просвечивали швы */
+  width: calc(100% + 1px);
+  height: 100%;
   overflow: hidden;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 .leaf__back { transform: rotateY(180deg); }
-.leaf__face > .spread { width: 200%; z-index: auto; pointer-events: none; }
-.leaf__front > .spread { left: -100%; }
+.leaf__face > .spread { z-index: auto; pointer-events: none; }
 /* Копия разворота на листе всегда в финальном виде, независимо от анимаций оригинала */
 .leaf .spread__bg { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; }
 .leaf__shade {
@@ -659,12 +673,8 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   opacity: 0;
   pointer-events: none;
 }
-.leaf__front .leaf__shade {
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25) 35%, rgba(0, 0, 0, 0.4));
-}
-.leaf__back .leaf__shade {
-  background: linear-gradient(270deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.2) 35%, rgba(0, 0, 0, 0.35));
-}
+/* Плотность тени каждой полосы задаёт book.js по её углу — так изгиб читается объёмно */
+.leaf__shade { background: #000; }
 /* Тень, которую лист отбрасывает на открывающуюся правую страницу */
 .book__cast {
   position: absolute;
