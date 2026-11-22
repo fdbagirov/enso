@@ -79,6 +79,17 @@ export function buildBook(root) {
   });
 
   let active = -1;
+  function freezePose(source, copies) {
+    for (const original of source.querySelectorAll('[data-amb]')) {
+      const key = original.dataset.amb;
+      for (const copy of copies) {
+        const target = copy.querySelector(`[data-amb="${key}"]`);
+        if (!target) continue;
+        target.style.translate = original.style.translate;
+        target.style.rotate = original.style.rotate;
+      }
+    }
+  }
 
   /* Закрытие альбома — в ту же сторону, что и листание: правая страница последнего разворота
      поворачивается через корешок и ложится налево. Лицо — копия правой страницы, оборот — тёмная обложка. */
@@ -108,6 +119,7 @@ export function buildBook(root) {
     closer: { el: closer, shades: [closerFront.shade, coverShade], cast: closerCast },
     // Альбом начинает закрываться: на копию левой страницы кладём текущий кадр видео
     freezeCloser() {
+      freezePose(last, [closerFront.face]);
       const src = snapshot(last.querySelector('video'));
       if (src) closerFront.frame.src = src;
     },
@@ -116,6 +128,8 @@ export function buildBook(root) {
       if (i === active) return;
       active = i;
       if (i < 0) return;
+      freezePose(spreads[i], [...leaves[i].el.querySelectorAll('.leaf__front')]);
+      freezePose(spreads[i + 1], [...leaves[i].el.querySelectorAll('.leaf__back')]);
       leaves[i].sources.forEach((video, side) => {
         const src = snapshot(video);
         if (src) leaves[i].frames[side].forEach((img) => (img.src = src));
@@ -134,7 +148,7 @@ export function buildBook(root) {
         const angle = -180 * q;
         const rel = angle - prev;
         prev = angle;
-        s.el.style.transform = (k === 0 ? `translateZ(${lift.toFixed(1)}px) ` : '') + `rotateY(${rel.toFixed(3)}deg)`;
+        s.el.style.transform = (k === 0 ? `translateZ(${lift}px) ` : '') + `rotateY(${rel}deg)`;
         // Свет: лицо темнеет, разворачиваясь от зрителя; оборот светлеет, ложась на страницу
         const c = Math.cos((angle * Math.PI) / 180);
         s.front.style.opacity = (((1 - c) / 2) * 0.8).toFixed(3);

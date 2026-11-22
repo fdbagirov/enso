@@ -1,0 +1,170 @@
+<!doctype html><meta charset="utf-8"><title>Enso scroll check</title>
+<style>body{margin:0;font:14px system-ui;background:#fff}header{height:70px;display:flex;align-items:center;gap:16px;padding:0 16px}iframe{width:100%;height:calc(100svh - 70px);border:0}pre{position:fixed;right:0;top:70px;max-width:580px;max-height:70vh;overflow:auto;background:#fff;color:#111;padding:16px;z-index:999;display:none}pre.ready{display:block}</style>
+<header><button id="run">Run scroll benchmark</button><button id="checks">Run scene checks</button><select id="seek"><option value="0">Hero</option><option value="1.8">Chapter</option><option value="7.2">Zoom midpoint</option><option value="8.5">Album</option><option value="10.2">Page turn</option><option value="14.45">Close album</option><option value="15.3">Map</option><option value="16.8">Plan</option><option value="18.4">Happy</option><option value="20">Benefits</option></select><span id="status">Loading scene</span></header><iframe src="/"></iframe><pre id="result"></pre>
+<script type="module">
+const frame = document.querySelector('iframe');
+const status = document.querySelector('#status');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function ready() { while (!frame.contentWindow.__story) await sleep(100); status.textContent = 'Ready'; }
+ready();
+document.querySelector('#seek').onchange = async e => {
+  const w = frame.contentWindow, st = w.__story?.scrollTrigger;
+  if (!st) return;
+  document.querySelector('#result').className = '';
+  w.__lenis.scrollTo(st.start + (st.end-st.start) * Number(e.target.value)/20.6, {immediate:true});
+};
+document.querySelector('#run').onclick = async () => {
+  const w = frame.contentWindow;
+  if (!w.__story) return;
+  document.querySelector('#result').className = '';
+  status.textContent = 'Running';
+  let recording = false, reads = {}, geometryWrites = 0;
+  const originals = [];
+  for (const key of ['offsetTop','offsetLeft','offsetWidth','offsetHeight','clientWidth','clientHeight']) {
+    const descriptor = Object.getOwnPropertyDescriptor(w.HTMLElement.prototype, key) || Object.getOwnPropertyDescriptor(w.Element.prototype, key);
+    const owner = Object.getOwnPropertyDescriptor(w.HTMLElement.prototype, key) ? w.HTMLElement.prototype : w.Element.prototype;
+    if (!descriptor?.get) continue;
+    originals.push(() => Object.defineProperty(owner, key, descriptor));
+    Object.defineProperty(owner, key, { ...descriptor, get() { if (recording) reads[key] = (reads[key] || 0) + 1; return descriptor.get.call(this); } });
+  }
+  const originalRect = w.Element.prototype.getBoundingClientRect;
+  w.Element.prototype.getBoundingClientRect = function() { if (recording) reads.rect = (reads.rect || 0) + 1; return originalRect.call(this); };
+  originals.push(() => w.Element.prototype.getBoundingClientRect = originalRect);
+  const tracked = new WeakMap();
+  const observer = new w.MutationObserver(records => {
+    if (!recording) return;
+    for (const {target} of records) {
+      if (!target.matches('.card, .spread__bg, .mk, .progress__done')) continue;
+      const value = ['left','top','width','height'].map(k => target.style[k]).join('|');
+      const previous = tracked.get(target);
+      if (previous !== undefined && previous !== value) geometryWrites++;
+      tracked.set(target, value);
+    }
+  });
+  observer.observe(w.document.body, {subtree:true,attributes:true,attributeFilter:['style']});
+  const results = [];
+  try {
+    const st = w.__story.scrollTrigger;
+    for (const [name,from,to] of [['cards',0.1,1.4],['zoom',6.5,8.1],['map',14.3,15.1],['happy',17.4,18.4]]) {
+      status.textContent = 'Running ' + name;
+      const pos = t => st.start + (st.end - st.start) * t / 20.6;
+      w.__lenis.scrollTo(pos(from), {immediate:true});
+      await sleep(850);
+      reads = {}; geometryWrites = 0;
+      let previous = 0, intervals = [], handle;
+      const tick = t => { if (previous) intervals.push(t - previous); previous=t; handle=requestAnimationFrame(tick); };
+      handle=requestAnimationFrame(tick);
+      recording = true;
+      w.__lenis.scrollTo(pos(to), {duration:1.6});
+      await sleep(2400);
+      recording = false;
+      cancelAnimationFrame(handle);
+      intervals.sort((a,b) => a-b);
+      results.push({name,frames:intervals.length,p50:intervals[Math.floor(intervals.length*.5)],p95:intervals[Math.floor(intervals.length*.95)],over25ms:intervals.filter(x=>x>25).length,geometryWrites,layoutReads:reads});
+    }
+    document.querySelector('#result').textContent = JSON.stringify(results,null,2);
+    document.querySelector('#result').className = 'ready';
+    status.textContent = 'Complete';
+  } finally { recording=false;observer.disconnect();originals.forEach(restore=>restore()); }
+};
+
+document.querySelector('#checks').onclick = async () => {
+  const w=frame.contentWindow, doc=w.document, results=[];
+  const style=selector => w.getComputedStyle(doc.querySelector(selector));
+  const shown=selector => style(selector).visibility === 'visible' && Number(style(selector).opacity) > 0.99;
+  const hidden=selector => style(selector).visibility === 'hidden' || Number(style(selector).opacity) < 0.01;
+  const assert=(name, ok, details='') => { results.push({name,pass:!!ok,details}); if (!ok) throw new Error(name); };
+  const seek=async t => {
+    const st=w.__story.scrollTrigger;
+    w.__lenis.scrollTo(st.start+(st.end-st.start)*t/20.6,{immediate:true});
+    await sleep(750);
+  };
+  document.querySelector('#result').className='';
+  status.textContent='Checking scenes';
+  try {
+    {
+      const initialWidth=frame.style.width;
+      frame.style.width='650px';
+      await sleep(850);
+      const a=doc.querySelector('.logo').getBoundingClientRect();
+      const b=doc.querySelector('.header__actions').getBoundingClientRect();
+      assert('Resizing before the first scroll keeps the header clear', a.right+12<=b.left);
+      frame.style.width=initialWidth;
+      await sleep(850);
+    }
+    await seek(1.8);
+    let maxAspectError=0;
+    for (const image of doc.querySelectorAll('.card__layer')) {
+      const r=image.getBoundingClientRect();
+      maxAspectError=Math.max(maxAspectError, Math.abs(r.width/r.height-image.naturalWidth/image.naturalHeight));
+    }
+    assert('Card transforms preserve image proportions', maxAspectError<0.001, 'max aspect error='+maxAspectError);
+    await seek(13.8);
+    await seek(14.45);
+    const stoppedY=w.scrollY;
+    await sleep(3200);
+    assert('Infrastructure arrives without further scroll', shown('#infra') && hidden('#book'), 'scroll delta='+Math.abs(stoppedY-w.scrollY));
+    assert('Stopped scroll remains fixed during arrival', Math.abs(stoppedY-w.scrollY)<1);
+    await seek(16.1);
+    await sleep(1100);
+    assert('Genplan finishes its short entrance', shown('#genplan') && hidden('#infra') && hidden('#book'));
+    const planMatrix=new w.DOMMatrixReadOnly(style('#genplan').transform);
+    assert('Genplan remains full screen without the thumbnail morph', Math.abs(planMatrix.a-1)<0.001 && Math.abs(planMatrix.d-1)<0.001 && Math.abs(planMatrix.e)<0.001 && Math.abs(planMatrix.f)<0.001);
+    await seek(17.6);
+    await sleep(2200);
+    assert('Happiness arrives independently', shown('#happy') && hidden('#genplan'));
+    await seek(20);
+    await sleep(2300);
+    assert('Benefits arrive after Happiness', shown('#benefits') && hidden('#happy'));
+    assert('Only the three supplied categories are interactive', doc.querySelectorAll('.benefits__heading button').length===3 && !doc.querySelector('.benefits__item--static :is(button,a,[tabindex])'));
+    for (const variant of ['landscape','amenities','architecture']) {
+      doc.querySelector('[data-benefit="'+variant+'"] button').click();
+      await sleep(750);
+      assert('Benefits switch to '+variant, doc.querySelector('#benefits').dataset.variant===variant && shown('.benefits__view--'+variant) && doc.querySelector('[data-benefit="'+variant+'"] button').getAttribute('aria-expanded')==='true');
+    }
+    await seek(18.4);
+    await sleep(800);
+    assert('Reverse from Benefits restores Happiness', shown('#happy') && hidden('#benefits'));
+    await seek(15.3);
+    await sleep(2500);
+    assert('Reverse scroll restores infrastructure', shown('#infra') && hidden('#happy') && hidden('#genplan'));
+    await seek(13.8);
+    await sleep(650);
+    assert('Reverse scroll restores the complete album', shown('#book') && shown('#book > .spread--3') && hidden('#infra'));
+    for (const t of [14.7,16.2,17.7,15.4,13.8]) {
+      const st=w.__story.scrollTrigger;
+      w.__lenis.scrollTo(st.start+(st.end-st.start)*t/20.6,{immediate:true});
+      await sleep(220);
+    }
+    await sleep(1600);
+    assert('Rapid direction changes leave no scene overlays', shown('#book') && hidden('#infra') && hidden('#genplan') && hidden('#happy'));
+    await seek(0.05);
+    assert('Return to hero hides all later scenes', hidden('#book') && hidden('#infra') && hidden('#genplan') && hidden('#happy'));
+    assert('The blue backdrop does not cover earlier scenes', hidden('.backdrop'));
+    await seek(5.95);
+    const mediaRect=doc.querySelector('.slide--3 .slide__media').getBoundingClientRect();
+    const scriptRect=doc.querySelector('.slide--3 .script').getBoundingClientRect();
+    assert('First walk handwriting fits completely inside the photo', scriptRect.left>=mediaRect.left && scriptRect.right<=mediaRect.right && scriptRect.top>=mediaRect.top && scriptRect.bottom<=mediaRect.bottom);
+    await seek(18.4);
+    await sleep(1300);
+    w.__lenis.scrollTo(0,{duration:0.8});
+    await sleep(1900);
+    assert('A smooth full return leaves the hero uncovered', hidden('.backdrop') && shown('.hero'));
+    assert('The header returns to dark ink after a smooth full return', style('.logo').backgroundColor==='rgb(66, 47, 44)');
+    const originalWidth=frame.style.width;
+    frame.style.width='650px';
+    await sleep(850);
+    const topCard=doc.querySelector('.card[data-id="top"]').getBoundingClientRect();
+    const unit=Math.min(doc.documentElement.clientWidth/1440,doc.querySelector('.stage').clientHeight/900);
+    assert('Stationary resize rebuilds the hero card dimensions', Math.abs(topCard.width-98*unit)<1, 'card width='+topCard.width+', expected='+98*unit);
+    const logoRect=doc.querySelector('.logo').getBoundingClientRect();
+    const actionsRect=doc.querySelector('.header__actions').getBoundingClientRect();
+    assert('The logo stays clear of header actions in a narrow window', logoRect.right+12<=actionsRect.left);
+    frame.style.width=originalWidth;
+    await sleep(850);
+    status.textContent='Checks passed';
+  } catch(error) { status.textContent='Checks failed: '+error.message; }
+  document.querySelector('#result').textContent=JSON.stringify(results,null,2);
+  document.querySelector('#result').className='ready';
+};
+</script>

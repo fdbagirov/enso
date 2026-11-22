@@ -9,6 +9,9 @@ const font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + bu
 
 // width: null — строка без переноса (ширина = ширина текста)
 const PHRASES = {
+  capЗ: {size:125.599,lineHeight:87.981,width:100,lines:['З']},
+  capВ: {size:125.599,lineHeight:87.981,width:100,lines:['В']},
+  capН: {size:125.599,lineHeight:87.981,width:100,lines:['Н']},
   hero: { size: 105.963, lineHeight: 67.817, width: 780.218, lines: ['Основа', 'для вашей', 'истории'] }, // 127:593
   slide1: { size: 56.947, lineHeight: 31.143, width: 317.519, lines: ['Помнишь,', 'как искали', 'наши окна'] }, // 127:326
   slide2: { size: 64, lineHeight: 44.832, width: null, lines: ['Уснули'] }, // 127:713

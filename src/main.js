@@ -8,6 +8,8 @@ import { buildBook } from './book.js';
 import { addAmbient, startAmbient, hoverEnabled } from './ambient.js';
 import { buildInfra } from './infra.js';
 import { buildPlan } from './plan.js';
+import { coverTransform } from './scroll-math.js';
+import { buildBenefits } from './benefits.js';
 
 gsap.registerPlugin(ScrollTrigger, Flip);
 
@@ -22,20 +24,25 @@ window.scrollTo(0, 0);
 /* ---------------- Единицы макета ---------------- */
 // Позиции карточек растягиваются по вьюпорту (x — по ширине, y — по высоте),
 // размеры — по единому коэффициенту, чтобы карточки не наезжали на центр на 1440 и 1920.
-const sx = () => innerWidth / 1440;
-const sy = () => innerHeight / 900;
+const viewport = { w: document.documentElement.clientWidth, h: $('.stage').clientHeight };
+const metrics = { media: [] };
+const sx = () => viewport.w / 1440;
+const sy = () => viewport.h / 900;
 const su = () => Math.min(sx(), sy());
 
 /* ---------------- Lenis ---------------- */
-const lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.9 });
+const lenis = new Lenis({ autoRaf: false, lerp: 0.085, wheelMultiplier: 0.9 });
 lenis.on('scroll', ScrollTrigger.update);
-gsap.ticker.add((time) => lenis.raf(time * 1000));
+// Lenis runs before the GSAP root timeline, so the scrub tween consumes this frame's scroll.
+gsap.ticker.add((time) => lenis.raf(time * 1000), false, true);
+ScrollTrigger.config({ ignoreMobileResize: true });
 gsap.ticker.lagSmoothing(0);
 lenis.stop();
 if (import.meta.env.DEV) window.__lenis = lenis;
 
 /* ---------------- Карточки ---------------- */
 const canvas = $('#canvas');
+const stage = $('.stage');
 const makeCard = (data) => {
   const dom = buildCard(data);
   canvas.append(dom.par);
@@ -60,7 +67,7 @@ const PER_LANE = 6;
 const RING_PULL = 80; // насколько дорожки стягиваются к центру у верха и низа экрана (px макета)
 const MAX_CARD_H = 175; // ограничение высоты, чтобы между фото в дорожке оставался зазор
 const WRAP_PAD = 230;
-const laneLoop = () => innerHeight + 2 * WRAP_PAD * su();
+const laneLoop = () => viewport.h + 2 * WRAP_PAD * su();
 const WIDTH_PATTERN = [1, 0.82, 0.94, 0.78, 0.9, 0.86];
 
 function assignLanes() {
@@ -121,27 +128,20 @@ function laneRect(c) {
 // Длина скролл-таймлайна в условных единицах: 0–1 — уход Hero, далее три главы,
 // потом фото третьей главы раскрывается на весь экран и превращается в альбом из трёх разворотов.
 // Следующая глава стартует через 0.3 после ухода предыдущей — фото и тексты не пересекаются.
-const STORY_LENGTH = 23.8; // вместе с высотой .story в style.css (2840vh)
-// Альбом закрывается: левая страница разворота 03 со всем содержимым ложится через корешок на правую,
-// показывая тёмную обложку; позади уже голубой фон карты. Закрытый альбом уходит, из фона проступает
-// карта района — сначала сверху, потом ложится в перспективу. Содержимое блока появляется само, по времени.
-const CLOSE = { at: 14.4, d: 1.4 };
-const MAP = { goneAt: CLOSE.at + CLOSE.d + 0.15, tiltAt: 16.4, tilt: 1.6 };
-const MAP_SETTLED = MAP.tiltAt + MAP.tilt;
-const PLAN = { at: 19.1, d: 1.6 }; // карта района → генплан
-const PLAN_SETTLED = PLAN.at + PLAN.d;
-const HAPPY = { at: 21.3, d: 1.8 }; // генплан уменьшается в кадр крыши блока «Счастье в каждом кадре»
-const HAPPY_SETTLED = HAPPY.at + HAPPY.d;
-let happyIntro; // заголовок и текст блока — по времени, не по скроллу
-let happyShown = false;
-let closing = false;
-const ZOOM = { at: 6.6, d: 1.3 }; // фото главы 3 → видео на весь экран (как в Getty)
+const STORY_LENGTH = 20.6; // .story = 2460svh; late transitions are time-based.
+const CLOSE = { at: 14.4 };
+const PLAN = { at: 15.9 };
+const HAPPY = { at: 17.5 };
+const BENEFITS = { at: 19.1 };
+let postScenes;
+let happyIntro;
+const ZOOM = { at: 6.25, d: 0.65 }; // фото главы 3 → видео на весь экран (как в Getty)
 const ZOOM_END = ZOOM.at + ZOOM.d; // отсюда видео играет, а разворот 01 проявляется сам
 let spreadIntro; // появление разворота 01 — по времени, не по скроллу
 let introShown = false;
 const FLIPS = [ // перелистывания 01 → 02 → 03
-  { at: 9.4, d: 1.6 },
-  { at: 11.8, d: 1.6 },
+  { at: 8.0, d: 1.15 },
+  { at: 10.0, d: 1.15 },
 ];
 const CHAPTERS = [
   { enter: 0.55, exit: 2.5 },
@@ -171,7 +171,7 @@ function storyVars(c) {
 }
 
 // Значения-функции: пересчитываются ScrollTrigger'ом при ресайзе
-const lazy = (fn, keys = ['left', 'top', 'width', 'height', 'opacity', 'filter', 'borderColor']) =>
+const lazy = (fn, keys = ['left', 'top', 'width', 'height', 'opacity', 'borderColor']) =>
   Object.fromEntries(keys.map((k) => [k, () => fn()[k]]));
 
 /* ---------------- Элементы ---------------- */
@@ -209,7 +209,7 @@ function buildDrawnScript(host, data) {
 // «Trim path»: контур каждой буквы прорисовывается по очереди, следом буква заливается.
 // Длительность буквы пропорциональна длине контура, весь проход — одной плавной кривой.
 // lineStrokes — штрихи без заливки (сердечко): только прорисовываются и остаются.
-function makeDraw(paths, { total = 1.7, lineStrokes = [] } = {}) {
+function makeDraw(paths, { total = 2.2, lineStrokes = [] } = {}) {
   const inner = gsap.timeline({ paused: true });
   let t = 0;
   paths.forEach((p) => {
@@ -219,11 +219,11 @@ function makeDraw(paths, { total = 1.7, lineStrokes = [] } = {}) {
       .to(p, { fillOpacity: 1, duration: d * 0.9, ease: 'power1.in' }, t + d * 0.45);
     t += d * 0.62;
   });
-  inner.to(paths, { strokeOpacity: 0, duration: 0.4 }, '>-0.1');
+  inner.to(paths, { strokeOpacity: 0, duration: 0.25, ease: 'none' }, '>-0.25');
   lineStrokes.forEach((p) => {
     inner.to(p, { strokeDashoffset: 0, duration: Number(p.dataset.len) / 160, ease: 'power1.inOut' }, '>-0.35');
   });
-  return gsap.to(inner, { progress: 1, duration: total, ease: 'power1.inOut', paused: true });
+  return gsap.to(inner, { progress: 1, duration: total, ease: 'none', paused: true });
 }
 
 // Сердечко из макета (17ed2.svg) встраиваем как есть, чтобы прорисовать его штрих
@@ -272,6 +272,12 @@ function layoutStack() {
       filter: 'blur(0px)',
     });
   });
+}
+
+// Keep the centered logo clear of the CTA when Chrome is a narrow desktop window.
+function logoHomeX() {
+  const w = metrics.headerWidth;
+  return Math.max(-(w / 2 - 75.5 - 24), Math.min(0, w / 2 - 115.5 - metrics.actionsWidth));
 }
 
 function logoStartVars() {
@@ -325,6 +331,8 @@ renderCount();
 
 await Promise.all([loadImages, document.fonts.ready, inlineSvgs(), intro.then()]);
 renderCount();
+metrics.headerWidth = header.clientWidth;
+metrics.actionsWidth = $('.header__actions').offsetWidth;
 /* ---------------- Распад стопки → Hero (GSAP Flip) ---------------- */
 // Стопка разлетается сразу, как только легло последнее фото и счётчик дошёл до 100%
 const reveal = gsap.timeline({ delay: 0.12 });
@@ -345,7 +353,7 @@ reveal
     }),
     0,
   )
-  .to(logo, { y: 0, scale: 1, duration: 1.6, ease: 'expo.inOut' }, 0.05)
+  .to(logo, { x: logoHomeX, y: 0, scale: 1, duration: 1.6, ease: 'expo.inOut' }, 0.05)
   .to(heroTags, { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out' }, 1.15)
   .to(heroLines, { yPercent: 0, duration: 1.2, stagger: 0.12, ease: 'expo.out' }, 1.2)
   .call(() => makeDraw(drawn.hero).play(), null, 1.6)
@@ -358,10 +366,43 @@ await reveal.then();
 
 document.body.style.overflow = '';
 lenis.start();
+// A photo collage and its caption/sticker share one motion surface, including page copies.
+$$('#book > .spread').forEach((spread, i) => {
+  const content = $('.spread__content', spread);
+  const group = document.createElement('div');
+  group.className = 'spread__collage';
+  group.dataset.amb = `s${i}-collage`;
+  const figures = $$(':scope > .collage-item', content);
+  content.insertBefore(group, $('.spread__spine', content));
+  figures.forEach(figure => {
+    $$('[data-amb]', figure).forEach(el => el.removeAttribute('data-amb'));
+    group.append(figure);
+  });
+});
+$$('.sp-cap').forEach(cap => {
+  const letter = cap.textContent.trim();
+  cap.textContent = '';
+  cap.classList.add('script--drawn');
+  const paths = buildDrawnScript(cap, SCRIPTS['cap' + letter]);
+  gsap.set(paths, {fillOpacity: 1, strokeOpacity: 0, strokeDashoffset: 0});
+  cap._draw = gsap.fromTo(cap, {opacity: 0}, {opacity: 1, duration: 0.6, ease: 'power2.out', paused: true});
+});
 const book = buildBook($('#book'));
+const pageTurns = FLIPS.map(() => ({p:0, target:0}));
 const infra = buildInfra($('#infra'));
 const plan = buildPlan($('#genplan'));
+const benefits = buildBenefits($('#benefits'), su);
+prepareCardSurfaces();
+measureScene();
+ScrollTrigger.addEventListener('refreshInit', measureScene);
 const story = buildStory();
+// refreshInit measures; refresh renders the rebuilt model even when the playhead did not move.
+ScrollTrigger.addEventListener('refresh', () => {
+  // Before the first logo tween starts, invalidation alone retains its previous start transform.
+  if (story.time() <= 0.05) gsap.set(logo, { x: logoHomeX });
+  updateFlow(story.time());
+  updateBook(story.time());
+});
 setupAmbient();
 if (import.meta.env.DEV) Object.assign(window, { __story: story, __book: book });
 
@@ -373,39 +414,74 @@ $('.scroll-btn').addEventListener('click', () => {
 /* ---------------- Скролл-повествование ---------------- */
 // Фон как в Getty: фото по бокам непрерывно текут вверх, ушедшие за верх возвращаются снизу.
 // «Барабан»: у середины экрана фото ближе и крупнее, к краям уходят вглубь и к краю экрана.
-function updateFlow(time) {
-  const vw = innerWidth;
-  const strength = gsap.utils.clamp(0, 1, time); // 0 — ровно макет Hero, 1 — режим глав
-  const min = -WRAP_PAD * su();
-  const loop = laneLoop();
-  cards.forEach((c) => {
-    const top = gsap.getProperty(c.el, 'top');
-    const left = gsap.getProperty(c.el, 'left');
-    const w = gsap.getProperty(c.el, 'width');
-    const h = gsap.getProperty(c.el, 'height');
-    const flow = time * FLOW_PER_UNIT * su() * LANES[c.lane].speed;
-    const screenTop = gsap.utils.wrap(min, min + loop, top - flow);
-    // Кольцо вокруг центра, как в Getty: на середине высоты фото дальше всего от центра,
-    // к верху и низу дорожки стягиваются к центру по дуге окружности
-    const v = gsap.utils.clamp(-1, 1, ((screenTop + h / 2) / innerHeight - 0.5) * 2);
-    const arc = 1 - Math.sqrt(1 - v * v); // 0 на середине, 1 у верхнего и нижнего края
-    const side = left + w / 2 < vw / 2 ? 1 : -1; // направление к центру экрана
-    gsap.set(c.par, { y: screenTop - top });
+// All layout reads happen at startup / refreshInit, before timeline writes.
+function measureScene() {
+  viewport.w = document.documentElement.clientWidth;
+  viewport.h = $('.stage').clientHeight;
+  metrics.headerWidth = header.clientWidth;
+  metrics.actionsWidth = $('.header__actions').offsetWidth;
+  metrics.media = $$('.slide__media').map(el => ({
+    left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight,
+  }));
+  infra.resize(viewport.w, viewport.h);
+  plan.resize(viewport.w, viewport.h);
+}
+
+function prepareCardSurfaces() {
+  cards.forEach(c => {
+    // Geometry is a numeric model; the DOM surface has a fixed size throughout scrolling.
+    c.el.classList.add('is-surface');
+    c.rect = { ...heroVars(c) };
+    c.base = { w: 100, h: 100 };
     gsap.set(c.el, {
-      x: side * strength * RING_PULL * su() * arc,
-      scale: 1 - strength * 0.05 * arc,
+      autoRound: false, left: 0, top: 0, width: c.base.w, height: c.base.h,
+      x: 0, y: 0, scale: 1, rotation: 0, filter: 'none', transformOrigin: '0 0',
+    });
+    c.layers = [...c.el.querySelectorAll('.card__layer')].map(image => {
+      image.style.objectFit = 'fill';
+      image.style.transformOrigin = '0 0';
+      return { image, w: image.naturalWidth || 1, h: image.naturalHeight || 1 };
     });
   });
+}
+
+function updateFlow(time) {
+  // Once the canvas is hidden, no card styles need to be updated.
+  const visible = time < ZOOM_END;
+  stage.classList.toggle('is-chapters', visible);
+  canvas.classList.toggle('is-moving', visible);
+  canvas.classList.toggle('is-under-header', visible && time > 0.35);
+  if (!visible) return;
+  const strength = gsap.utils.clamp(0, 1, time);
+  const u = su(), min = -WRAP_PAD * u, loop = laneLoop();
+  for (const c of cards) {
+    const { left, top, width, height, opacity, borderColor } = c.rect;
+    const flow = time * FLOW_PER_UNIT * u * LANES[c.lane].speed;
+    const y = gsap.utils.wrap(min, min + loop, top - flow);
+    const v = gsap.utils.clamp(-1, 1, ((y + height / 2) / viewport.h - 0.5) * 2);
+    const arc = 1 - Math.sqrt(1 - v * v);
+    const side = left + width / 2 < viewport.w / 2 ? 1 : -1;
+    const ring = 1 - strength * 0.05 * arc;
+    const x = left + side * strength * RING_PULL * u * arc;
+    c.el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${width / c.base.w * ring}, ${height / c.base.h * ring})`;
+    c.el.style.opacity = opacity;
+    c.el.style.outlineColor = borderColor;
+    for (const { image, w, h } of c.layers) {
+      image.style.transform = coverTransform(width, height, c.base.w, c.base.h, w, h);
+    }
+  }
 }
 // Видео разворота играет только пока его видно (или пока его страница переворачивается).
 // Видео с велосипедистом стоит на первом кадре (тот же кадр, что фото главы 3), пока фото
 // раскрывается, и запускается, только когда мы уже на развороте «Знакомые места».
 function updateBook(t) {
   const [f1, f2] = FLIPS;
+  $('#book').classList.toggle('has-spine', t >= ZOOM_END);
+  $('#book').classList.toggle('is-zooming', t >= ZOOM.at && t < ZOOM_END);
   const want = [
     t >= ZOOM_END && t < f1.at + f1.d,
     t > f1.at - 0.4 && t < f2.at + f2.d,
-    t > f2.at - 0.4 && t < MAP.goneAt + 0.6,
+    t > f2.at - 0.4 && (t < CLOSE.at || postScenes?.bookVisible),
   ];
   book.videos.forEach((v, i) => {
     if (want[i] && v.paused) v.play().catch(() => {});
@@ -420,20 +496,36 @@ function updateBook(t) {
     if (show) spreadIntro?.play();
     else spreadIntro?.reverse();
   }
-  // Страница начинает закрываться — на её копию кладём текущий кадр видео
-  const isClosing = t >= CLOSE.at && t <= CLOSE.at + CLOSE.d;
-  if (isClosing && !closing) book.freezeCloser();
-  closing = isClosing;
-  infra.setActive(t >= MAP_SETTLED - 0.1 && t < PLAN.at);
-  plan.setActive(t >= PLAN_SETTLED - 0.1 && t < HAPPY.at);
-  const happy = t >= HAPPY_SETTLED - 0.3;
-  if (happy !== happyShown) {
-    happyShown = happy;
-    if (happy) happyIntro.play();
-    else happyIntro.reverse();
-  }
+  postScenes?.update(t);
   book.setActiveLeaf(FLIPS.findIndex((f) => t >= f.at && t <= f.at + f.d));
-  FLIPS.forEach((f, i) => book.renderLeaf(i, gsap.utils.clamp(0, 1, (t - f.at) / f.d)));
+  FLIPS.forEach((f, i) => {
+    const turn=pageTurns[i], target=t >= f.at ? 1 : 0;
+    if (target !== turn.target) {
+      turn.target=target;
+      gsap.to(turn,{p:target,duration:reduceMotion?0.2:1.15,ease:'power2.inOut',overwrite:true,onUpdate:()=>{
+        const moving=turn.p>0 && turn.p<1;
+        gsap.set(book.leaves[i].el,{visibility:moving?'visible':'hidden'});
+        gsap.set(book.spreads[i],{visibility:turn.p<1?'visible':'hidden',clipPath:turn.p>0?'inset(0% 50% 0% 0%)':'inset(0%)'});
+        if (turn.p>0) gsap.set(book.spreads[i+1],{visibility:'visible'});
+        book.setActiveLeaf(moving?i:-1);
+        book.renderLeaf(i,turn.p);
+      }});
+    }
+  });
+  book.spreads.forEach((spread,i)=>{
+    const cap=$('.sp-cap',spread);
+    const visible=t >= (i===0?ZOOM_END:FLIPS[i-1].at);
+    if(cap?._draw && visible!==cap._writing){
+      cap._writing=visible;
+      visible?cap._draw.restart():cap._draw.pause(0);
+      if(i>0){
+        const copy=$('.sp-line, .sp-lead, .sp-list li',spread);
+        cap._copyTween?.kill();
+        gsap.set(copy,{opacity:0});
+        if(visible) cap._copyTween=gsap.to(copy,{opacity:1,duration:0.85,stagger:0.08,delay:0.65,ease:'power2.out'});
+      }
+    }
+  });
 }
 
 function buildStory() {
@@ -454,20 +546,23 @@ function buildStory() {
 
   // Фон: Hero-сетка перестраивается в раскладку глав (поток вверх добавляет updateFlow)
   cards.forEach((c) => {
-    tl.fromTo(c.el, lazy(() => heroVars(c)), { ...lazy(() => storyVars(c)), duration: 1, ease: 'power2.inOut' }, 0);
+    tl.fromTo(c.rect, lazy(() => heroVars(c)), { ...lazy(() => storyVars(c)), duration: 1, ease: 'power2.inOut' }, 0);
   });
 
   // Hero уезжает вверх, логотип освобождает центр
   tl.to('.hero__block', { y: () => -260 * su(), opacity: 0, duration: 0.5, ease: 'power1.in' }, 0)
     .to('.hero__script', { y: () => -220 * su(), opacity: 0, duration: 0.5, ease: 'power1.in' }, 0)
     .to('.scroll-btn', { opacity: 0, y: 20, duration: 0.3 }, 0)
-    .to(logo, { x: () => -(header.clientWidth / 2 - 75.5 - 24), duration: 0.8, ease: 'power2.inOut' }, 0.05)
+    .fromTo(logo, { x: logoHomeX }, { x: () => -(metrics.headerWidth / 2 - 75.5 - 24), duration: 0.8, ease: 'power2.inOut' }, 0.05)
     // Непрозрачный эквивалент rgba(67,33,0,.07) на фоне #fdf1e5 — чтобы карточки не просвечивали под кнопкой
     .to('.btn-burger', { backgroundColor: '#f0e2d5', duration: 0.6 }, 0.1)
     .to('.progress', { opacity: 1, duration: 0.3 }, 0.7)
-    .to('.progress__done', { width: () => 109 * su(), duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[1].enter)
-    .to('.progress__done', { width: () => 176 * su(), duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[2].enter);
+    .to('.progress__done', { scaleX: 109 / 210, duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[1].enter)
+    .to('.progress__dot', { x: () => 109 * su(), duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[1].enter)
+    .to('.progress__done', { scaleX: 176 / 210, duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[2].enter)
+    .to('.progress__dot', { x: () => 176 * su(), duration: 0.7, ease: 'power1.inOut' }, CHAPTERS[2].enter);
 
+  tl.set('.progress__dot', { x: () => 58 * su() }, 0);
   const medias = [];
   $$('.slide').forEach((slide, i) => {
     const { enter, exit } = CHAPTERS[i];
@@ -477,7 +572,7 @@ function buildStory() {
     const tags = $$('.tag', slide);
     const glyphs = drawn[`slide${i + 1}`];
     const heart = $$('.slide__heart-in path', slide);
-    const draw = makeDraw(glyphs, { total: 1.3, lineStrokes: heart });
+    const draw = makeDraw(glyphs, { total: 1.8, lineStrokes: heart });
     // Фото третьей главы — первый кадр видео; оно останавливается на том же масштабе 1.04,
     // что и видео разворота, чтобы при раскрытии на весь экран кадр не прыгал
     const rest = slide.classList.contains('slide--3') ? 1.04 : 1;
@@ -485,7 +580,7 @@ function buildStory() {
     medias.push(media);
 
     // Фото выезжает снизу, как при обычной прокрутке, и встаёт в центр
-    tl.fromTo(media, { y: () => innerHeight - media.offsetTop + 40 * su() }, { y: 0, duration: 0.8, ease: 'power2.out' }, enter)
+    tl.fromTo(media, { y: () => viewport.h - metrics.media[i].top + 40 * su() }, { y: 0, duration: 0.8, ease: 'power2.out' }, enter)
       .fromTo(image, { scale: 1.12 * rest }, { scale: rest, duration: 1.2, ease: 'power1.out' }, enter)
       .fromTo(title, { y: () => 160 * su(), opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' }, enter + 0.7)
       .fromTo(
@@ -501,16 +596,14 @@ function buildStory() {
       // Глава уезжает вверх, освобождая место следующей, которая поднимается снизу
       // Глава уезжает вверх одним блоком: текст едет следом за фото, как при обычной прокрутке.
       // Следующее фото выходит снизу уже за текстом, поэтому ничего не перекрывается.
-      tl.to([media, $('.slide__text', slide)], { y: () => -(innerHeight + 40 * su()), duration: 0.8, ease: 'power1.in' }, exit);
+      tl.to([media, $('.slide__text', slide)], { y: () => -(viewport.h + 40 * su()), duration: 0.8, ease: 'power1.in' }, exit);
     }
   });
 
   // До запуска истории фото глав спрятаны CSS-ом; теперь они стоят за нижним краем
   gsap.set(medias, { opacity: 1 });
   buildAlbum(tl);
-  buildMapTransition(tl);
-  buildPlanTransition(tl);
-  buildHappyTransition(tl);
+  postScenes = buildPostScenes();
   tl.to({}, { duration: 0.01 }, STORY_LENGTH - 0.01);
   updateFlow(tl.time());
   updateBook(tl.time());
@@ -524,8 +617,9 @@ function buildAlbum(tl) {
   const slide3 = $('.slide--3');
   const photo3 = $('.slide__media', slide3);
   const bg0 = $('.spread__bg', s0);
-  const stageW = () => root.clientWidth;
-  const stageH = () => root.clientHeight;
+  gsap.set(bg0, { opacity: 0 });
+  const bgInner = $('.spread__bg-in', bg0);
+  const video = $('video', bgInner);
 
   // Пока идут главы, альбом спрятан; следующие развороты ждут своего перелистывания
   gsap.set([s1, s2], { visibility: 'hidden' });
@@ -535,16 +629,17 @@ function buildAlbum(tl) {
      Видео сразу встаёт ровно в рамку фото (то же кадрирование и зеркало) и проявляется поверх,
      затем рамка расширяется на весь экран — как раскрытие картины в Getty Tracing Art. */
   const z = ZOOM.at;
-  const photoRect = (k) => () => {
-    const r = { left: photo3.offsetLeft, top: photo3.offsetTop, width: photo3.offsetWidth, height: photo3.offsetHeight };
-    return r[k];
-  };
-  tl.fromTo(
-    bg0,
-    { left: photoRect('left'), top: photoRect('top'), width: photoRect('width'), height: photoRect('height'), opacity: 0 },
-    { left: 0, top: 0, width: stageW, height: stageH, duration: ZOOM.d, ease: 'expo.inOut' },
-    z,
-  )
+  const zoom = { p: 0 };
+  video.style.objectFit = 'fill';
+  bg0.style.transformOrigin = bgInner.style.transformOrigin = '0 0';
+  function renderZoom() {
+    const r = metrics.media[2], p = zoom.p;
+    const w = r.width + (viewport.w - r.width) * p;
+    const h = r.height + (viewport.h - r.height) * p;
+    bg0.style.transform = `translate3d(${r.left * (1 - p)}px, ${r.top * (1 - p)}px, 0) scale(${w / viewport.w}, ${h / viewport.h})`;
+    bgInner.style.transform = coverTransform(w, h, viewport.w, viewport.h, video.videoWidth || 1920, video.videoHeight || 1080, 1.04);
+  }
+  tl.fromTo(zoom, { p: 0 }, { p: 1, duration: ZOOM.d, ease: 'power2.inOut', onUpdate: renderZoom }, z)
     .to(bg0, { opacity: 1, duration: 0.15 }, z)
     .fromTo($('.spread__veil', s0), { opacity: 0 }, { opacity: 1, duration: ZOOM.d, ease: 'power1.inOut' }, z + 0.2)
     .set(photo3, { visibility: 'hidden' }, z + 0.35)
@@ -559,12 +654,25 @@ function buildAlbum(tl) {
     .to('.btn-burger span', { backgroundColor: '#fff', duration: 0.5 }, z + 0.6)
     .to('.side-widget:not(.side-widget--light)', { opacity: 0, duration: 0.5 }, z + 0.6)
     .to('.side-widget--light', { opacity: 1, duration: 0.5 }, z + 0.6);
+  renderZoom();
+  ScrollTrigger.addEventListener('refresh', renderZoom);
 
-  /* Первый разворот: тексты и коллаж просто проявляются сами, по времени, а не по скроллу.
-     Прокрутили назад до раскрытия — так же сами исчезают. */
+  // First spread: writing, then copy, photos and sticker arrive in a quiet sequence.
+  // The following two spreads retain their original presentation.
   const c0 = $('.spread__content', s0);
-  gsap.set(c0, { opacity: 0 });
-  spreadIntro = gsap.to(c0, { opacity: 1, duration: 0.7, ease: 'power1.out', paused: true });
+  spreadIntro = gsap.timeline({ paused: true })
+    .fromTo($$('.sp-line', c0), { opacity: 0, y: () => 18 * su() },
+      { opacity: 1, y: 0, duration: 1, stagger: 0.12, ease: 'power2.out' }, 0.65)
+    .fromTo($$('.sp-lead, .sp-list li', c0), { opacity: 0, y: () => 12 * su() },
+      { opacity: 1, y: 0, duration: 0.85, stagger: 0.12, ease: 'power2.out' }, 0.95)
+    .fromTo($('[data-role="main"]', c0), { opacity: 0, y: () => 32 * su() },
+      { opacity: 1, y: 0, duration: 1.15, ease: 'power2.out' }, 0.65)
+    .fromTo($('[data-role="second"]', c0), { opacity: 0, y: () => 26 * su(), rotation: 2 },
+      { opacity: 1, y: 0, rotation: 0, duration: 1.1, ease: 'power2.out' }, 0.95)
+    .fromTo($('[data-role="sticker"]', c0), { opacity: 0, y: () => 22 * su(), rotation: -2 },
+      { opacity: 1, y: 0, rotation: 0, duration: 1.1, ease: 'power2.out' }, 1.2)
+    .fromTo($('.sp-count', c0), { opacity: 0 }, { opacity: 1, duration: 0.8 }, 0.85);
+  if (reduceMotion) spreadIntro.timeScale(4);
 
   /* Перелистывание: мягкая правая страница изгибается и ложится налево через корешок
      (изгиб и свет полос считает book.renderLeaf в updateBook). Под ней открывается правая
@@ -584,145 +692,181 @@ function buildAlbum(tl) {
   });
 }
 
-/* ---------------- Переход: альбом → карта района ---------------- */
-function buildMapTransition(tl) {
+/* ---------------- Time-based scenes after the album ---------------- */
+// Scroll selects a scene once. The transition always finishes on its own, even if scrolling stops.
+// Each change cancels the previous transition; jumping or reversing cannot leave a half-open book.
+function buildPostScenes() {
+  const bookRoot = $('#book'), happy = $('#happy');
   const s3 = book.spreads[2];
   const { el: closer, shades: [front, back], cast } = book.closer;
-  const c = CLOSE.at;
-  const map = infra.state;
+  const widgets = $$('.side-widget');
+  const happyPhoto = $('.happy__photo img', happy);
+  let current = 'album', transition = null, bookVisible = false;
+  let returningToChapters = false;
 
-  // Позади альбома — голубой фон следующего блока
-  tl.set('.backdrop', { visibility: 'visible' }, c)
-    // Правая страница (вместе с видео, текстами и коллажем) отрывается от разворота…
-    .set(closer, { visibility: 'visible' }, c)
-    .set(s3, { clipPath: 'inset(0% 50% 0% 0%)' }, c)
-    // …и, как при листании, ложится через корешок налево: видим тёмную обложку альбома
-    .fromTo(closer, { rotationY: 0 }, { rotationY: -180, duration: CLOSE.d, ease: 'power2.inOut' }, c)
-    .fromTo(closer, { z: 0 }, { z: () => 60 * su(), duration: CLOSE.d / 2, ease: 'sine.out', yoyo: true, repeat: 1 }, c)
-    .fromTo(front, { opacity: 0 }, { opacity: 0.85, duration: CLOSE.d / 2, ease: 'power1.in' }, c)
-    .fromTo(back, { opacity: 0.6 }, { opacity: 0, duration: CLOSE.d / 2, ease: 'power1.out' }, c + CLOSE.d / 2)
-    // Тень закрывающейся страницы на левой странице сгущается к концу
-    .fromTo(cast, { opacity: 0 }, { opacity: 1, duration: CLOSE.d * 0.9, ease: 'power2.in' }, c + CLOSE.d * 0.1)
-    // Закрытый альбом уходит: чуть отдаляется и тает
-    .to([s3, closer], { opacity: 0, duration: 0.6, ease: 'power1.in' }, MAP.goneAt)
-    .to(cast, { opacity: 0, duration: 0.3 }, MAP.goneAt)
-    .fromTo($('#book'), { scale: 1 }, { scale: 0.94, duration: 0.6, ease: 'power1.in' }, MAP.goneAt)
-    // Растаявший альбом больше не рисуем: под картой он невидим, но браузер продолжал бы его отрисовывать
-    .set($('#book'), { visibility: 'hidden' }, MAP.goneAt + 0.65)
-    // Блок карты: фон того же цвета, карта проступает сверху и ложится в перспективу
-    .set(infra.root, { visibility: 'visible' }, MAP.tiltAt)
-    .set($('.infra__bg', infra.root), { opacity: 1 }, MAP.tiltAt)
-    .fromTo(map, { op: 0 }, { op: 1, duration: 0.6, ease: 'power1.out', onUpdate: infra.touch }, MAP.tiltAt)
-    .fromTo(map, { rx: 0, rz: -40, sc: 1.35 }, { rx: 63, rz: -63, sc: 1, duration: MAP.tilt, ease: 'power2.inOut', onUpdate: infra.touch }, MAP.tiltAt)
-    // Хедер снова тёмный, плашка — голубая, как в макете блока
-    .to(logo, { backgroundColor: '#2f4765', duration: 0.5 }, MAP.goneAt)
-    .to('.btn--dark', { backgroundColor: '#2f4765', color: '#ffffff', duration: 0.5 }, MAP.goneAt)
-    .to('.btn-burger', { backgroundColor: '#bbcfe2', duration: 0.5 }, MAP.goneAt)
-    .to('.btn-burger span', { backgroundColor: '#2f4765', duration: 0.5 }, MAP.goneAt)
-    .to('.side-widget--light', { opacity: 0, duration: 0.5 }, MAP.goneAt)
-    .to('.side-widget--map', { opacity: 1, duration: 0.5 }, MAP.goneAt);
-}
-
-/* ---------------- Переход: карта района → генплан ---------------- */
-// Карта «ныряет» к комплексу (окно карты растёт вокруг метки ЭНСО и тает), а рендер генплана
-// проступает поверх из лёгкого зума — будто камера опустилась к кварталу.
-function buildPlanTransition(tl) {
-  const p = PLAN.at;
-  const map = infra.state;
-  tl.to(map, { sc: 2.4, duration: PLAN.d, ease: 'power2.in', onUpdate: infra.touch }, p)
-    .to($$('.infra__text, .infra__marks', infra.root), { opacity: 0, duration: 0.5, ease: 'power1.in' }, p)
-    .set(plan.root, { visibility: 'visible' }, p + 0.35)
-    .fromTo(plan.root, { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, p + 0.35)
-    .fromTo(plan.scene, { scale: 1.18 }, { scale: 1, duration: PLAN.d - 0.35, ease: 'power2.out' }, p + 0.35)
-    // Хедер — белый логотип и стеклянный бургер поверх рендера, плашка справа тоже стеклянная
-    .to(logo, { backgroundColor: '#ffffff', duration: 0.5 }, p + 0.6)
-    .to('.btn-burger', { backgroundColor: 'rgba(255, 255, 255, 0.1)', boxShadow: 'inset 0 0 0 1px #a7a7a7', duration: 0.5 }, p + 0.6)
-    .to('.btn-burger span', { backgroundColor: '#ffffff', duration: 0.5 }, p + 0.6)
-    .to('.side-widget--map', { opacity: 0, duration: 0.5 }, p + 0.6)
-    .to('.side-widget--plan', { opacity: 1, duration: 0.5 }, p + 0.6)
-    // Генплан закрыл экран целиком — 3D-карту под ним не рисуем
-    .set(infra.root, { visibility: 'hidden' }, PLAN_SETTLED);
-}
-
-/* ---------------- Переход: генплан → «Счастье в каждом кадре» ---------------- */
-// Генплан — вид сверху — уменьшается ровно в рамку кадра крыши-сада (тоже вид сверху) и в ней
-// сменяется этим кадром; позади проступает полноэкранное фото. Заголовок и текст — сами, по времени.
-function buildHappyTransition(tl) {
-  const p = HAPPY.at;
-  const root = $('#happy');
-  const thumb = $('.happy__thumb', root);
-  const photo = $('.happy__photo img', root);
-  // Куда встаёт экран генплана: масштаб «cover» в рамку, лишнее срезается clip-path
-  const fitBox = () => {
-    const W = root.clientWidth;
-    const H = root.clientHeight;
-    const w = thumb.offsetWidth;
-    const h = thumb.offsetHeight;
-    const k = Math.max(w / W, h / H);
-    const cx = (W - w / k) / 2;
-    const cy = (H - h / k) / 2;
-    return { k, cx, cy, x: thumb.offsetLeft - cx * k, y: thumb.offsetTop - cy * k };
-  };
-  const box = (key) => () => fitBox()[key];
-
-  gsap.set(plan.root, { transformOrigin: '0 0' });
-  tl.set(root, { visibility: 'visible' }, p)
-    .set(infra.root, { visibility: 'hidden' }, p)
-    .to('.plan__shade', { opacity: 0, duration: 0.4 }, p)
-    .fromTo(
-      plan.root,
-      { x: 0, y: 0, scale: 1, clipPath: 'inset(0px 0px 0px 0px)' },
-      {
-        x: box('x'),
-        y: box('y'),
-        scale: box('k'),
-        clipPath: () => { const b = fitBox(); return `inset(${b.cy}px ${b.cx}px ${b.cy}px ${b.cx}px)`; },
-        duration: 1.4,
-        ease: 'power3.inOut',
-      },
-      p,
-    )
-    // В рамке генплан сменяется кадром крыши, который лежит ровно под ним
-    .to(plan.root, { opacity: 0, duration: 0.35, ease: 'power1.inOut' }, p + 1.25)
-    .fromTo(photo, { scale: 1.12 }, { scale: 1, duration: HAPPY.d, ease: 'power2.out' }, p)
-    // Хедер: белая кнопка заявки и светлое стекло бургера, как в макете
-    .to('.btn--dark', { backgroundColor: '#ffffff', color: '#422f2c', duration: 0.5 }, p + 0.6)
-    .to('.btn-burger', { backgroundColor: 'rgba(255, 255, 255, 0.12)', boxShadow: 'inset 0 0 0 1px rgba(167, 167, 167, 0)', duration: 0.5 }, p + 0.6);
-
-  // Появление по времени: строки заголовка поднимаются из-под маски, буква «С» прописывается слева направо
-  const lines = $$('.happy__title .line__in', root);
-  const cap = $('.happy__cap', root);
-  const text = $('.happy__text', root);
+  const lines = $$('.happy__title .line__in', happy);
   happyIntro = gsap.timeline({ paused: true })
-    // Росчерк «С» выходит за бокс глифа — маска шире бокса
-    .fromTo(cap, { clipPath: 'inset(-30% 130% -30% -40%)' }, { clipPath: 'inset(-30% -40% -30% -40%)', duration: 0.9, ease: 'power2.inOut' }, 0)
-    .fromTo(lines, { yPercent: 110 }, { yPercent: 0, duration: 1, stagger: 0.1, ease: 'expo.out' }, 0.25)
-    .fromTo(text, { opacity: 0, y: () => 16 * su() }, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }, 0.55);
+    .fromTo($('.happy__cap', happy),
+      { clipPath: 'inset(-30% 130% -30% -40%)' },
+      { clipPath: 'inset(-30% -40% -30% -40%)', duration: 1.5, ease: 'sine.inOut' }, 0)
+    .fromTo(lines, { yPercent: 110 },
+      { yPercent: 0, duration: 1.25, stagger: 0.14, ease: 'power2.out' }, 0.4)
+    .fromTo($('.happy__text', happy), { opacity: 0, y: () => 16 * su() },
+      { opacity: 1, y: 0, duration: 1, ease: 'power2.out' }, 0.8);
   if (reduceMotion) happyIntro.timeScale(4);
-  happyIntro.progress(0).pause();
+
+  function header(tl, theme, at = 0) {
+    const navy = theme === 'infra';
+    const paper = theme === 'benefits';
+    const ink = paper ? '#422f2c' : navy ? '#2f4765' : '#ffffff';
+    tl.to(logo, { backgroundColor: ink, duration: 0.45 }, at)
+      .to('.btn--dark', { backgroundColor: paper ? '#ffffff' : ink, color: navy ? '#ffffff' : '#422f2c', duration: 0.45 }, at)
+      .to('.btn-burger', { backgroundColor: navy ? '#bbcfe2' : theme === 'happy' ? 'rgba(47,71,101,0.35)' : 'rgba(255,255,255,0.12)', boxShadow: theme === 'plan' ? 'inset 0 0 0 1px #a7a7a7' : 'inset 0 0 0 1px rgba(167,167,167,0)', duration: 0.45 }, at)
+      .to('.btn-burger span', { backgroundColor: paper ? '#ffffff' : ink, duration: 0.45 }, at)
+      .to(widgets, { opacity: 0, duration: 0.35 }, at)
+      .to(theme === 'benefits' ? '.side-widget--benefits' : theme === 'infra' ? '.side-widget--map' : theme === 'plan' || theme === 'happy' ? '.side-widget--plan' : '.side-widget--light', { opacity: 1, duration: 0.35 }, at);
+  }
+
+  function paperHeader(t) {
+    gsap.set(logo, { backgroundColor: '#422f2c' });
+    gsap.set('.btn--dark', { backgroundColor: '#422f2c', color: '#ffffff' });
+    gsap.set('.btn-burger', { backgroundColor: t > 0.1 ? '#f0e2d5' : '#ffffff', boxShadow: 'none' });
+    gsap.set('.btn-burger span', { backgroundColor: '#422f2c' });
+    gsap.set(widgets, { opacity: 0 });
+    gsap.set('.side-widget:not([class*="side-widget--"])', { opacity: 1 });
+  }
+
+  function album(t) {
+    bookVisible = false;
+    infra.setVisible(false);
+    // The backdrop belongs to the late scenes. It must never cover the earlier chapters.
+    gsap.set('.backdrop', { visibility: 'hidden' });
+    gsap.set([infra.root, plan.root, happy, benefits.root], { autoAlpha: 0 });
+    gsap.set([closer, cast], { autoAlpha: 0 });
+    gsap.set(s3, { clipPath: 'inset(0% 0% 0% 0%)', opacity: 1, visibility: t >= FLIPS[1].at ? 'visible' : 'hidden' });
+    gsap.set(bookRoot, { scale: 1, x: 0, y: 0, opacity: 1, visibility: t >= ZOOM.at ? 'visible' : 'hidden' });
+    returningToChapters = t >= ZOOM.at;
+    if (t >= ZOOM.at + 0.6) header(transition, 'album');
+    else paperHeader(t);
+  }
+
+  function infrastructure(previous) {
+    const fromBook = previous === 'album';
+    const arrival = fromBook ? 1.05 : 0;
+    gsap.set('.backdrop', { visibility: 'visible' });
+    gsap.set([plan.root, happy, benefits.root], { autoAlpha: 0 });
+    gsap.set(infra.root, { autoAlpha: 0 });
+    gsap.set($('.infra__bg', infra.root), { opacity: 1 });
+    infra.setVisible(true);
+    Object.assign(infra.state, { rx: 0, rz: -40, sc: 1.12, op: 1 });
+    infra.touch();
+    if (fromBook) {
+      bookVisible = true;
+      book.freezeCloser();
+      gsap.set(bookRoot, { visibility: 'visible', opacity: 1, x: 0, y: 0, scale: 1, transformOrigin: '25% 50%' });
+      gsap.set(s3, { clipPath: 'inset(0% 50% 0% 0%)', opacity: 1 });
+      transition
+        .set(closer, { autoAlpha: 1, rotationY: 0, z: 0 }, 0)
+        .set(cast, { autoAlpha: 0 }, 0)
+        .to(closer, { rotationY: -180, duration: 0.9, ease: 'power2.inOut' }, 0)
+        .fromTo(closer, { z: 0 }, { z: () => 35 * su(), duration: 0.45, repeat: 1, yoyo: true, ease: 'sine.inOut' }, 0)
+        .fromTo(front, { opacity: 0 }, { opacity: 0.65, duration: 0.8 }, 0)
+        .fromTo(back, { opacity: 0.4 }, { opacity: 0, duration: 0.45 }, 0.45)
+        // Once fully shut, the opaque cover replaces the page. No translucent text remains.
+        .set(s3, { visibility: 'hidden' }, 0.9)
+        .to(bookRoot, { scale: 1, x: () => -viewport.w * 0.85, y: 0, opacity: 0, duration: 0.7, ease: 'power2.in' }, 0.9)
+        .set(bookRoot, { visibility: 'hidden' }, 1.6)
+        .call(() => { bookVisible = false; book.videos[2].pause(); }, null, 1.6);
+    } else {
+      bookVisible = false;
+      gsap.set(bookRoot, { autoAlpha: 0 });
+    }
+    transition
+      .to(infra.root, { autoAlpha: 1, duration: 0.65, ease: 'power1.out' }, arrival)
+      .to(infra.state, { rx: 63, rz: -63, sc: 1, duration: 1.15, ease: 'power2.inOut', onUpdate: infra.touch }, arrival)
+      .call(() => infra.setActive(true), null, arrival + 0.7);
+    header(transition, 'infra', arrival);
+  }
+
+  function genplan() {
+    bookVisible = false;
+    infra.setVisible(true);
+    gsap.set(plan.root, { autoAlpha: 0, x: 0, y: 0, scale: 1, clipPath: 'none' });
+    gsap.set(plan.scene, { scale: 1 });
+    transition
+      .to([bookRoot, happy, infra.root, benefits.root], { autoAlpha: 0, duration: 0.45, ease: 'power1.inOut' }, 0)
+      .to(plan.root, { autoAlpha: 1, duration: 0.7, ease: 'power1.inOut' }, 0)
+      .call(() => { infra.setVisible(false); plan.setActive(true); }, null, 0.45);
+    header(transition, 'plan');
+  }
+
+  function happiness() {
+    bookVisible = false;
+    gsap.set(happy, { autoAlpha: 0 });
+    // The roof thumbnail is a standalone photo. The genplan never flies into it.
+    transition
+      .to([bookRoot, infra.root, plan.root, benefits.root], { autoAlpha: 0, duration: 0.55, ease: 'power1.inOut' }, 0)
+      .to(happy, { autoAlpha: 1, duration: 0.75, ease: 'power1.inOut' }, 0)
+      .fromTo(happyPhoto, { scale: 1.025 }, { scale: 1, duration: 1.1, ease: 'power2.out' }, 0)
+      .call(() => { infra.setVisible(false); happyIntro.restart(); }, null, 0.2);
+    header(transition, 'happy');
+  }
+
+  function advantages() {
+    bookVisible = false;
+    gsap.set(benefits.root, { autoAlpha: 0 });
+    transition
+      .to([bookRoot, infra.root, plan.root, happy], { autoAlpha: 0, duration: 0.5, ease: 'power1.inOut' }, 0)
+      .to(benefits.root, { autoAlpha: 1, duration: 0.75, ease: 'power1.inOut' }, 0)
+      .call(() => { infra.setVisible(false); benefits.setActive(true); }, null, 0.2);
+    header(transition, 'benefits');
+  }
+
+  return {
+    get bookVisible() { return bookVisible; },
+    update(t) {
+      const next = t >= BENEFITS.at ? 'benefits' : t >= HAPPY.at ? 'happy' : t >= PLAN.at ? 'plan' : t >= CLOSE.at ? 'infra' : 'album';
+      if (next === current) {
+        if (next === 'album' && returningToChapters && t < ZOOM.at) {
+          // Stop the autonomous white-header tween before returning ownership to the scroll timeline.
+          transition?.kill();
+          returningToChapters = false;
+          paperHeader(t);
+          gsap.set(bookRoot, { visibility: 'hidden' });
+        }
+        return;
+      }
+      const previous = current;
+      current = next;
+      transition?.kill();
+      infra.setActive(false);
+      plan.setActive(false);
+      benefits.setActive(false);
+      happyIntro.pause(0);
+      transition = gsap.timeline();
+      if (reduceMotion) transition.timeScale(4);
+      if (next === 'album') album(t);
+      else if (next === 'infra') infrastructure(previous);
+      else if (next === 'plan') genplan();
+      else if (next === 'benefits') advantages();
+      else happiness();
+    },
+  };
 }
 
 /* ---------------- Живой коллаж: мышь + покачивание ---------------- */
 function setupAmbient() {
-  // Фон истории: чем непрозрачнее (ближе) карточка, тем сильнее она реагирует
-  cards.forEach((c, i) => {
-    const o = (c.data.story ?? c.data.hero)?.o ?? 1;
-    addAmbient(c.el, {
-      amp: 6 + 16 * o,
-      rot: 0.3 + 0.7 * o,
-      idle: { y: 3 + 2 * o, r: 0.5, duration: 4.5 + (i % 4) * 0.5, phase: (i * 0.37) % 1 },
-    });
-  });
-  // Фото глав — на среднем плане; тексты неподвижны ради читаемости
-  $$('.slide__media').forEach((m, i) => addAmbient(m, { amp: 10, rot: 0.35, idle: { y: 3, r: 0.25, duration: 5.5, phase: i * 0.3 } }));
-
-  // Развороты: двигаются только две фотографии и карточка-стикер, фон и тексты неподвижны.
-  // Цели — оригинал и его копии на переворачиваемых листах.
-  const all = (key) => $$(`[data-amb="${key}"]`);
-  [0, 1, 2].forEach((s) => {
-    addAmbient(all(`s${s}-main`), { amp: 15, rot: 0.8, idle: { y: 5, r: 0.6, duration: 5.6, phase: 0 } });
-    addAmbient(all(`s${s}-second`), { amp: 25, rot: 1.5, idle: { y: 5, r: 0.6, duration: 4.8, phase: 0.5 } });
-    addAmbient(all(`s${s}-sticker`), { amp: 35, rot: 2, idle: { y: 5, r: 0.6, duration: 6, phase: 0.25 } });
+  book.spreads.forEach((spread, s) => {
+    $('.spread__collage > .collage-item', spread).forEach((figure, index) => addAmbient(figure, {
+      // Only deliberate cursor movement remains; no sub-30px idle oscillation.
+      amp: [32, 42, 35][index % 3], rot: [0.2, 0.45, 0.7][index % 3], duration: [1.4, 0.8, 1.9][index % 3],
+      active: () => {
+        const t = story.time();
+        const start = s === 0 ? ZOOM_END : FLIPS[s - 1].at;
+        const end = s === 2 ? CLOSE.at : FLIPS[s].at + FLIPS[s].d;
+        return t >= start && t < end;
+      },
+    }));
   });
   startAmbient(su);
 

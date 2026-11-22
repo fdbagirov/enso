@@ -60,7 +60,6 @@ function unproject(fx, fy) {
 export function buildInfra(root) {
   const frame = root.querySelector('.infra__frame');
   const map = root.querySelector('.infra__map');
-  const view = root.querySelector('.infra__view');
   const plane = root.querySelector('.infra__plane');
   const marks = [...root.querySelectorAll('.mk')].map((el) => {
     const [fx, fy] = el.dataset.anchor.split(',').map(Number);
@@ -75,23 +74,28 @@ export function buildInfra(root) {
   const tilt = { x: 0, z: 0 };
   let dirty = true;
 
-  const fit = () => frame.style.setProperty('--s', Math.min(innerWidth / 1440, innerHeight / 900));
-  fit();
-  addEventListener('resize', fit);
+  let visible = false;
+  let bounds = { left: 0, top: 0, width: 1, height: 1 };
+  const resize = (w, h) => {
+    const s = Math.min(w / 1440, h / 900);
+    frame.style.setProperty('--s', s);
+    // The unscaled map view is fixed in the design frame. No pointer-time layout read.
+    bounds = { left: (w - 1440 * s) / 2 + VIEW.x * s, top: (h - 900 * s) / 2 + VIEW.y * s, width: VIEW.w * s, height: VIEW.h * s };
+    dirty = true;
+  };
 
   function render() {
-    if (!dirty) return;
+    if (!dirty || !visible) return;
     dirty = false;
     const rx = state.rx + tilt.x;
     const rz = state.rz + tilt.z;
-    plane.style.transform = `translateZ(${Z}px) rotateX(${rx.toFixed(3)}deg) rotateZ(${rz.toFixed(3)}deg)`;
-    map.style.transform = `scale(${state.sc.toFixed(4)})`;
+    plane.style.transform = `translateZ(${Z}px) rotateX(${rx}deg) rotateZ(${rz}deg)`;
+    map.style.transform = `scale(${state.sc})`;
     map.style.opacity = state.op;
     for (const m of marks) {
       const [x, y] = project(m.uv[0], m.uv[1], rx, rz);
-      // left/top, а не transform: transform остаётся свободным для анимаций появления и выбора
-      m.el.style.left = `${x.toFixed(2)}px`;
-      m.el.style.top = `${y.toFixed(2)}px`;
+      // Independent translate composes with the GSAP transform used for intro/selection.
+      m.el.style.translate = `${x}px ${y}px 0px`;
     }
   }
   gsap.ticker.add(render);
@@ -105,8 +109,8 @@ export function buildInfra(root) {
     const qz = gsap.quickTo(tilt, 'z', q);
     addEventListener('pointermove', (e) => {
       if (!active || e.pointerType !== 'mouse') return;
-      const r = view.getBoundingClientRect();
-      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      const r = bounds;
+      const inside = e.clientX >= r.left && e.clientX <= r.left + r.width && e.clientY >= r.top && e.clientY <= r.top + r.height;
       if (!inside) { qx(0); qz(0); return; }
       const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
       const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
@@ -165,6 +169,13 @@ export function buildInfra(root) {
     root,
     state,
     touch,
+    resize,
+    setVisible(on) {
+      if (on === visible) return;
+      visible = on;
+      root.classList.toggle('is-rendering', on);
+      if (on) dirty = true;
+    },
     setActive(on) {
       if (on === active) return;
       active = on;

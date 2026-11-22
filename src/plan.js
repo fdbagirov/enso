@@ -20,12 +20,10 @@ export function buildPlan(root) {
   const cards = [...root.querySelectorAll('.bcard')];
   const ids = buildings.map((b) => b.dataset.building);
 
-  const fit = () => frame.style.setProperty('--s', Math.max(innerWidth / 1440, innerHeight / 900));
-  fit();
-  addEventListener('resize', () => {
-    fit();
+  const resize = (w, h) => {
+    frame.style.setProperty('--s', Math.max(w / 1440, h / 900));
     if (current) place(current);
-  });
+  };
 
   let current = null;
   let hideTimer = 0;
@@ -41,8 +39,7 @@ export function buildPlan(root) {
     if (x + w > innerWidth - EDGE) x = r.left + OVERLAP - w;
     x = gsap.utils.clamp(EDGE, Math.max(EDGE, innerWidth - EDGE - w), x);
     const y = gsap.utils.clamp(80, Math.max(80, innerHeight - 104 - h), innerHeight / 2 - h / 2);
-    card.style.left = `${x}px`;
-    card.style.top = `${y}px`;
+    card.style.translate = `${x}px ${y}px 0px`;
     card.dataset.side = x < r.left ? 'left' : 'right';
   }
 
@@ -114,6 +111,7 @@ export function buildPlan(root) {
   return {
     root,
     scene,
+    resize,
     setActive(on) {
       if (on === active) return;
       active = on;

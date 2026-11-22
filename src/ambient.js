@@ -23,12 +23,14 @@ const items = [];
 export function addAmbient(targets, o = {}) {
   const els = [...(targets?.length !== undefined ? targets : [targets])].filter(Boolean);
   if (!els.length || reduceMotion) return;
-  const { amp = 0, rot = 0, dir = -1, duration = 1.1, ease = 'power3.out', idle } = o;
+  const { amp = 0, rot = 0, dir = -1, duration = 1.1, ease = 'power3.out', idle, active = () => true } = o;
+  // Sub-30px movement reads as jitter while scrolling, including idle oscillation.
+  if (amp < 30) return;
   const m = { x: 0, y: 0, r: 0 };
   const rest = { y: 0, r: 0 };
   const q = { duration, ease };
   const item = {
-    els, amp, rot, dir, m, rest,
+    els, amp, rot, dir, m, rest, active,
     qx: gsap.quickTo(m, 'x', q),
     qy: gsap.quickTo(m, 'y', q),
     qr: gsap.quickTo(m, 'r', q),
@@ -59,8 +61,17 @@ function aim(nx, ny) {
 
 function render() {
   for (const it of items) {
-    const t = `${(it.m.x).toFixed(2)}px ${(it.m.y + it.rest.y * unit()).toFixed(2)}px`;
-    const r = `${(it.m.r + it.rest.r).toFixed(3)}deg`;
+    const enabled = it.active() && canHover;
+    if (enabled !== it.enabled) {
+      it.enabled = enabled;
+      for (const el of it.els) {
+        el.classList.toggle('is-parallax', enabled);
+        if (!enabled) { el.style.translate = ''; el.style.rotate = ''; }
+      }
+    }
+    if (!enabled) continue;
+    const t = `${it.m.x}px ${it.m.y + it.rest.y * unit()}px 0px`;
+    const r = `${it.m.r + it.rest.r}deg`;
     for (const el of it.els) {
       el.style.translate = t;
       el.style.rotate = r;

@@ -23,7 +23,7 @@
   --veil: rgba(67, 33, 0, 0.07);
   --card-border: #967a75;
   /* 1 пиксель макета 1440×900, вписанный во вьюпорт */
-  --u: min(calc(100vw / 1440), calc(100vh / 900));
+  --u: min(calc(100vw / 1440), calc(100svh / 900));
   --serif: 'OpiumNew', 'Cormorant Garamond', Georgia, serif;
   --script: 'Gogol', 'Marck Script', cursive;
   --sans: 'Golos Text', system-ui, sans-serif;
@@ -53,7 +53,6 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .card-par {
   position: absolute;
   inset: 0;
-  will-change: transform;
 }
 .card {
   position: absolute;
@@ -61,8 +60,9 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   top: 0;
   border: 1px solid var(--card-border);
   opacity: 0;
-  will-change: transform, opacity;
+  overflow: hidden;
 }
+.canvas.is-moving .card { will-change: transform; }
 .card__img {
   position: absolute;
   inset: 0;
@@ -178,11 +178,11 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 }
 
 /* ---------- Сцена истории ---------- */
-.story { position: relative; height: 2840vh; }
+.story { position: relative; height: 2460svh; }
 .stage {
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100svh;
   overflow: hidden;
   z-index: 5;
 }
@@ -287,14 +287,14 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .scroll-btn img { width: 20px; height: 20px; }
 
 /* ---------- Слайды-главы ---------- */
-.slide { position: absolute; inset: 0; pointer-events: none; }
+.slide { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .slide__media {
   position: absolute;
   border: 1px solid var(--ink);
   overflow: hidden;
   opacity: 0;
-  will-change: transform, opacity;
 }
+.stage.is-chapters .slide__media { will-change: transform; }
 .slide__img { position: absolute; max-width: none; }
 .slide__script {
   position: absolute;
@@ -421,8 +421,8 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   object-fit: cover;
 }
 .slide--3 .slide__script {
-  left: calc(329 * var(--u));
-  top: calc(223 * var(--u));
+  left: calc(280 * var(--u));
+  top: calc(168 * var(--u));
   width: calc(329.522 * var(--u));
   height: calc(213.816 * var(--u));
 }
@@ -442,14 +442,14 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   height: 12px;
   display: flex;
   align-items: center;
-  z-index: 20;
+  z-index: 0;
   opacity: 0;
   pointer-events: none;
 }
-.progress__done { flex: none; width: calc(58 * var(--u)); height: 2px; background: var(--ink); }
-.progress__dot { flex: none; padding: 0 4px; background: var(--bg); display: flex; }
+.progress__done { position: absolute; left: 0; width: 100%; height: 2px; background: var(--ink); transform: scaleX(calc(58 / 210)); transform-origin: 0 50%; }
+.progress__dot { position: absolute; left: 0; padding: 0 4px; background: var(--bg); display: flex; }
 .progress__dot i { width: 12px; height: 12px; border-radius: 58px; background: var(--ink); }
-.progress__rest { flex: 1 0 0; height: 2px; background: var(--line-soft); }
+.progress__rest { position: absolute; z-index: -1; width: 100%; height: 2px; background: var(--line-soft); }
 
 /* ---------- Альбом «Локация» ---------- */
 .side-widget--light {
@@ -769,8 +769,9 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   width: 1858.542px;
   height: 1858.542px;
   transform: translateZ(97.014px) rotateX(63deg) rotateZ(-63deg);
-  will-change: transform;
 }
+.infra.is-rendering .infra__plane,
+.infra.is-rendering .mk { will-change: transform; }
 .infra__plane img { width: 100%; height: 100%; max-width: none; }
 .infra__fog { position: absolute; pointer-events: none; }
 .infra__fog--top {
@@ -790,7 +791,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 
 /* Метки на карте: каждая — точка-якорь 0×0, содержимое растёт от неё */
 .infra__marks { position: absolute; inset: 0; }
-.mk { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.mk { position: absolute; left: 0; top: 0; width: 0; height: 0; }
 .mk__building {
   position: absolute;
   left: -59.86px;
@@ -1167,3 +1168,116 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   margin: 0;
   font: 500 calc(20 * var(--u)) / calc(26 * var(--u)) var(--sans);
 }
+
+/* Scroll-owned surfaces have no CSS easing competing with the GSAP frame. */
+.card, .slide__media, .spread__bg, .spread__bg-in, .mk, .progress__done, .progress__dot { transition: none; }
+
+.spread__collage { position: absolute; inset: 0; }
+.spread__collage.is-parallax, .book.is-zooming > .spread--1 > .spread__bg, .book.is-zooming > .spread--1 > .spread__bg > .spread__bg-in { will-change: transform; }
+
+.closer > .closer__face { width: 100%; height: 100%; }
+
+.card.is-surface { border: 0; outline: 1px solid var(--card-border); outline-offset: -1px; }
+
+/* Fade only the moving card canvas under the fixed header; full-screen scenes keep their imagery. */
+.canvas.is-under-header {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 64px, #000 112px);
+  mask-image: linear-gradient(to bottom, transparent 0 64px, #000 112px);
+}
+
+@media (max-width: 600px) {
+  .header__actions { right: 16px; }
+  .header__actions .btn--dark { padding-inline: 10px; font-size: 13px; }
+}
+
+/* ---------- Преимущества (Figma 127:564) ---------- */
+.benefits {
+  opacity: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  color: var(--ink);
+  background: var(--bg);
+}
+.benefits.is-active { pointer-events: auto; }
+.benefits__tag {
+  position: absolute;
+  left: calc(120 * var(--u));
+  top: calc(50% - 304 * var(--u));
+  translate: 0 -50%;
+  margin: 0;
+  padding: calc(8 * var(--u)) calc(20 * var(--u));
+  border: 1px solid var(--line-soft);
+  border-radius: 100px;
+  font: 500 calc(14 * var(--u)) / calc(20 * var(--u)) var(--sans);
+}
+.benefits__nav {
+  position: absolute;
+  z-index: 2;
+  left: calc(120 * var(--u));
+  top: calc(50% - 254 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(40 * var(--u));
+  width: calc(462 * var(--u));
+}
+.benefits__heading {
+  position: relative;
+  margin: 0;
+  color: #6a534a;
+  opacity: 0.8;
+  font: 400 calc(48 * var(--u)) / calc(52 * var(--u)) var(--serif);
+  letter-spacing: calc(-0.48 * var(--u));
+}
+.benefits__heading button {
+  display: block;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+}
+.benefits__heading button:focus-visible { outline: 2px solid currentColor; outline-offset: 8px; border-radius: 2px; }
+.benefits__item.is-selected .benefits__heading { color: var(--ink); opacity: 1; }
+.benefits__amenities-long { white-space: nowrap; }
+.benefits__panel { width: calc(423 * var(--u)); margin-top: calc(40 * var(--u)); }
+.benefits__panel[hidden] { display: none; }
+.benefits__panel p { margin: 0; font: 400 calc(16 * var(--u)) / calc(24 * var(--u)) var(--sans); }
+.benefits__ring { position: absolute; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; }
+.benefits__item.is-selected .benefits__ring { opacity: 1; }
+.benefits__ring img { max-width: none; flex: none; transform: rotate(-6.57deg) scaleY(-1); }
+.benefits__ring--architecture { left: calc(-61 * var(--u)); top: calc(-38 * var(--u)); width: calc(409.779 * var(--u)); height: calc(190.911 * var(--u)); }
+.benefits__ring--architecture img { width: calc(397.6 * var(--u)); height: calc(148.588 * var(--u)); }
+.benefits__ring--landscape { left: calc(-38.2 * var(--u)); top: calc(-49.1 * var(--u)); width: calc(460.083 * var(--u)); height: calc(151.309 * var(--u)); }
+.benefits__ring--landscape img { width: calc(453.573 * var(--u)); height: calc(102.274 * var(--u)); }
+.benefits__ring--amenities { left: calc(-35.41 * var(--u)); top: calc(-46.67 * var(--u)); width: calc(543.164 * var(--u)); height: calc(145.759 * var(--u)); }
+.benefits__ring--amenities img { width: calc(538.534 * var(--u)); height: calc(99.991 * var(--u)); transform: rotate(-5.15deg) scaleY(-1); }
+.benefits__media { position: absolute; inset: 0 0 0 50%; overflow: hidden; }
+.benefits__view { position: absolute; inset: 0; margin: 0; overflow: hidden; opacity: 0; visibility: hidden; }
+.benefits__view.is-selected { opacity: 1; visibility: visible; }
+.benefits__image { position: absolute; max-width: none; }
+.benefits__view--architecture .benefits__image { inset: 0; width: 100%; height: 100%; object-position: 50% 100%; }
+.benefits__view--landscape .benefits__image { left: -16.86%; top: -0.78%; width: 116.81%; height: 104.37%; }
+.benefits__view--amenities .benefits__image { left: -5.67%; top: -4.63%; width: 133.64%; height: 106.91%; }
+.benefits__shade { position: absolute; right: calc(-221.3 * var(--u)); bottom: calc(-229.3 * var(--u)); width: calc(790.6 * var(--u)); height: calc(657.6 * var(--u)); pointer-events: none; }
+.benefits__view--amenities .benefits__shade { right: calc(-331.3 * var(--u)); bottom: calc(-277.3 * var(--u)); }
+.benefits__caption { position: absolute; right: calc(-0.396 * var(--u)); top: calc(100% - 235 * var(--u)); width: calc(441.392 * var(--u)); height: calc(226.756 * var(--u)); display: flex; align-items: center; justify-content: center; color: #fff; }
+.benefits__script { display: block; flex: none; width: calc(424.541 * var(--u)); font: 400 calc(86.153 * var(--u)) / calc(60.366 * var(--u)) var(--script); text-align: center; transform: rotate(-15deg); }
+.benefits__script > span { display: block; }
+.benefits__view--landscape .benefits__caption { right: calc(-59.396 * var(--u)); top: calc(100% - 227 * var(--u)); }
+.benefits__view--amenities .benefits__caption { right: calc(-35.955 * var(--u)); top: calc(100% - 215 * var(--u)); width: calc(455.951 * var(--u)); height: calc(214.519 * var(--u)); }
+.benefits__view--amenities .benefits__script { width: calc(444.437 * var(--u)); font-size: calc(90.19 * var(--u)); line-height: calc(51.2 * var(--u)); }
+.side-widget--benefits { opacity: 0; background: none; }
+
+/* The binding belongs to the open album, never the preceding photo zoom. */
+.book:not(.has-spine) .spread__spine { opacity: 0; }
+.sp-cap { overflow: visible; }
+.collage-item.is-parallax { will-change: transform; }
+
+/* Hide browser chrome without disabling wheel, touch or keyboard scrolling. */
+html, body { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }

@@ -50,6 +50,8 @@
     <span class="preloader__count">0</span>
   </div>
 
+  <img class="side-widget side-widget--benefits" src="/img/plan/6db64.svg" width="40" height="92" alt="" aria-hidden="true" />
+
   <main>
     <section class="story" id="story">
       <div class="stage">
@@ -468,7 +470,7 @@
         </section>
 
         <!-- «Счастье в каждом кадре» (Figma 127:561): полноэкранное фото, кадр крыши-сада в белой рамке.
-             Генплан уменьшается ровно в эту рамку и сменяется кадром крыши (main.js). -->
+             Фото крыши независимо; переход к блоку — короткая смена экрана (main.js). -->
         <section class="happy" id="happy" aria-labelledby="happy-title">
           <div class="happy__photo">
             <img src="/img/happy/happy.webp" srcset="/img/happy/happy-1440.webp 1440w, /img/happy/happy.webp 2560w" sizes="max(100vw, 130vh)" width="2560" height="1978" alt="Девушка обнимает золотистого ретривера у окна" />
@@ -482,6 +484,60 @@
             <span class="visually-hidden">Счастье в каждом кадре</span>
           </h2>
           <p class="happy__text">Среда, где архитектура работает на&nbsp;ваш комфорт. Камерный двор-сад, светлые входные группы, подземный паркинг со&nbsp;спуском на&nbsp;лифте и&nbsp;сервисы у&nbsp;порога&nbsp;— тихое убежище от&nbsp;городского ритма, созданное для&nbsp;вас.</p>
+        </section>
+
+        <!-- Преимущества: Figma 127:564, 180:6268, 180:6317. -->
+        <section class="benefits" id="benefits" aria-labelledby="benefits-title" data-variant="architecture">
+          <h2 class="visually-hidden" id="benefits-title">Преимущества ЭНСО</h2>
+          <p class="benefits__tag">Преимущества</p>
+          <div class="benefits__nav">
+            <article class="benefits__item is-selected" data-benefit="architecture">
+              <h3 class="benefits__heading">
+                <button type="button" id="benefit-architecture" aria-expanded="true" aria-controls="benefit-architecture-panel">Авторская архитектура</button>
+                <span class="benefits__ring benefits__ring--architecture" aria-hidden="true"><img src="/img/benefits/architecture-ring.svg" width="397.6" height="148.588" alt="" /></span>
+              </h3>
+              <div class="benefits__panel" id="benefit-architecture-panel" role="region" aria-labelledby="benefit-architecture">
+                <p>Пять кварталов от&nbsp;разных бюро объединены единым пешеходным бульваром. Натуральный клинкер и&nbsp;окна до&nbsp;2,5&nbsp;м наполняют дома светом.</p>
+              </div>
+            </article>
+            <article class="benefits__item" data-benefit="landscape">
+              <h3 class="benefits__heading">
+                <button type="button" id="benefit-landscape" aria-expanded="false" aria-controls="benefit-landscape-panel">Благоустройство</button>
+                <span class="benefits__ring benefits__ring--landscape" aria-hidden="true"><img src="/img/benefits/landscape-ring.svg" width="453.573" height="102.274" alt="" /></span>
+              </h3>
+              <div class="benefits__panel" id="benefit-landscape-panel" role="region" aria-labelledby="benefit-landscape" hidden>
+                <p>Закрытые от&nbsp;машин дворы и&nbsp;зелёные террасы на&nbsp;крышах стилобатов. Сад непрерывного цветения, зоны йоги и&nbsp;детские площадки из&nbsp;дерева.</p>
+              </div>
+            </article>
+            <article class="benefits__item" data-benefit="amenities">
+              <h3 class="benefits__heading">
+                <button type="button" id="benefit-amenities" aria-label="Аменитис — соседские гостиные" aria-expanded="false" aria-controls="benefit-amenities-panel"><span class="benefits__amenities-short">Аменитис</span><span class="benefits__amenities-long" hidden>Соседские гостиные</span></button>
+                <span class="benefits__ring benefits__ring--amenities" aria-hidden="true"><img src="/img/benefits/amenities-ring.svg" width="538.534" height="99.991" alt="" /></span>
+              </h3>
+              <div class="benefits__panel" id="benefit-amenities-panel" role="region" aria-labelledby="benefit-amenities" hidden>
+                <p>Сквозные лобби с&nbsp;колясочными и&nbsp;лапомойками. В&nbsp;каждом квартале&nbsp;— соседская гостиная<br />с&nbsp;кофе-пойнтом, коворкингом и&nbsp;детский клуб.</p>
+              </div>
+            </article>
+            <div class="benefits__item benefits__item--static"><h3 class="benefits__heading">Инженерия</h3></div>
+            <div class="benefits__item benefits__item--static"><h3 class="benefits__heading">Паркинг и сервис</h3></div>
+          </div>
+          <div class="benefits__media" aria-live="polite">
+            <figure class="benefits__view benefits__view--architecture is-selected" data-benefit-view="architecture">
+              <img class="benefits__image" src="/img/benefits/architecture.png" width="1024" height="1024" alt="Клинкерный фасад ЭНСО с панорамными окнами и закруглёнными балконами" decoding="async" />
+              <img class="benefits__shade" src="/img/benefits/architecture-shade.svg" width="790.6" height="657.6" alt="" aria-hidden="true" />
+              <figcaption class="benefits__caption"><span class="benefits__script"><span>характер</span><span>фасадов</span></span></figcaption>
+            </figure>
+            <figure class="benefits__view benefits__view--landscape" data-benefit-view="landscape" aria-hidden="true">
+              <img class="benefits__image" src="/img/benefits/landscape.png" width="1899" height="2121" alt="Пара с собакой отдыхает в зелёном дворе-саду" decoding="async" />
+              <img class="benefits__shade" src="/img/benefits/photo-shade.svg" width="790.6" height="657.6" alt="" aria-hidden="true" />
+              <figcaption class="benefits__caption"><span class="benefits__script"><span>Наш</span><span>двор-сад</span></span></figcaption>
+            </figure>
+            <figure class="benefits__view benefits__view--amenities" data-benefit-view="amenities" aria-hidden="true">
+              <img class="benefits__image" src="/img/benefits/amenities.png" width="1024" height="1024" alt="Соседская гостиная с панорамными окнами, мягкими креслами и кофе-пойнтом" decoding="async" />
+              <img class="benefits__shade" src="/img/benefits/photo-shade.svg" width="790.6" height="657.6" alt="" aria-hidden="true" />
+              <figcaption class="benefits__caption"><span class="benefits__script"><span>Уют</span><span>с порога</span></span></figcaption>
+            </figure>
+          </div>
         </section>
       </div>
     </section>
