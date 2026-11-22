@@ -176,7 +176,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 }
 
 /* ---------- Сцена истории ---------- */
-.story { position: relative; height: 2220vh; }
+.story { position: relative; height: 2840vh; }
 .stage {
   position: sticky;
   top: 0;
@@ -907,4 +907,261 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 
 @media (prefers-reduced-motion: reduce) {
   .hw { clip-path: none; }
+}
+
+/* ---------- Генплан (Figma 127:559 / 179:5856) ---------- */
+.side-widget--plan { opacity: 0; background: none; }
+.plan {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  background: #dbe6f0;
+  color: #2f4765;
+  --navy: #2f4765;
+}
+.plan.is-active { pointer-events: auto; }
+/* Макет 1440×900, растянутый «cover»: рендер всегда закрывает экран, контуры совпадают со зданиями */
+.plan__frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1440px;
+  height: 900px;
+  margin: -450px 0 0 -720px;
+  transform: scale(var(--s, 1));
+}
+.plan__scene { position: absolute; inset: 0; }
+.plan__render {
+  position: absolute;
+  left: -157.94px;
+  top: 0.06px;
+  width: 1599.048px;
+  height: 899.943px;
+  object-fit: cover;
+  max-width: none;
+}
+.plan__contours { position: absolute; inset: 0; width: 1440px; height: 900px; overflow: visible; }
+.bld { cursor: pointer; pointer-events: all; outline: none; }
+.bld__fill { fill: #dbe6f0; fill-opacity: 0.56; }
+.bld__line { fill: none; stroke: #fff; stroke-width: 8; }
+.bld > use { opacity: 0; transition: opacity 180ms ease-out; }
+.bld.is-on > use { opacity: 1; }
+
+.plan__key {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  transform-origin: 50% 45%;
+}
+.plan__key img { width: 64px; height: 64px; transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+.plan__key:hover img,
+.plan__key[aria-expanded="true"] img { transform: translateY(-3px); }
+.plan__key:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Тёмное пятно под логотипом, чтобы белый логотип читался на светлых крышах */
+.plan__shade {
+  position: absolute;
+  left: -257px;
+  top: -158px;
+  width: 571px;
+  height: 282px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.plan__shade img { flex: none; width: 1034.4px; height: 707.4px; max-width: none; transform: rotate(-6.3deg); }
+
+/* Нижняя панель: в пикселях экрана, как хедер */
+.plan__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 24px;
+  background: linear-gradient(to top, rgba(0, 0, 0, .6), rgba(0, 0, 0, .1) 48%, rgba(0, 0, 0, 0) 80%);
+}
+.seg { justify-self: start; display: flex; }
+.queue { display: flex; }
+.plan__all { justify-self: end; display: flex; gap: 4px; }
+.seg, .queue {
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .1);
+  -webkit-backdrop-filter: blur(48px);
+  backdrop-filter: blur(48px);
+}
+.seg { padding: 4px; }
+.seg__btn {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 8px;
+  font: 500 16px/20px var(--sans);
+  color: #fff;
+  transition: background-color .25s, color .25s;
+}
+.seg__btn.is-on { background: #fff; color: var(--navy); }
+.seg__btn:not(.is-on):hover { background: rgba(255, 255, 255, .12); }
+.queue { align-items: center; gap: 24px; padding: 0 16px; color: #fff; font: 500 16px/20px var(--sans); }
+.queue__arrow { display: grid; place-items: center; width: 20px; height: 20px; }
+.queue__arrow:disabled { cursor: default; opacity: .5; }
+.queue__arrow--prev img { transform: scaleX(-1); }
+
+.pbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font: 500 16px/20px var(--sans);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .25s;
+}
+.pbtn--light { background: #fff; color: var(--navy); }
+.pbtn--light:hover { background: #eaeff5; }
+.pbtn--icon { width: 48px; padding: 0; }
+.pbtn--icon img { transform: rotate(-90deg); }
+.pbtn--navy { background: var(--navy); color: #fff; }
+.pbtn--navy:hover { background: #22364f; }
+.seg__btn:focus-visible, .pbtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.bcard .pbtn:focus-visible, .bcard a:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+/* Карточка корпуса: появляется рядом с корпусом, место считает plan.js */
+.bcard {
+  position: absolute;
+  width: 412px;
+  max-width: calc(100vw - 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 36px;
+  padding: 32px 24px;
+  background: #fff;
+  color: var(--navy);
+  box-shadow: 0 24px 60px -24px rgba(31, 44, 60, .35);
+}
+.bcard[hidden] { display: none; }
+.bcard__head { display: flex; align-items: center; gap: 16px; }
+.bcard__title { margin: 0; font: 400 40px/40px var(--serif); letter-spacing: -0.4px; white-space: nowrap; }
+.bcard__sale {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 4px 12px 5px;
+  border-radius: 8px;
+  background: #e2e9f2 url('/img/plan/gold.webp') center bottom / cover;
+  color: #fff;
+  font: 500 16px/20px var(--sans);
+}
+.bcard__badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: -12px; }
+.bcard__badges li {
+  height: 28px;
+  padding: 4px 12px 5px;
+  border-radius: 36px;
+  background: #eaeff5;
+  font: 500 16px/20px var(--sans);
+  white-space: nowrap;
+}
+.bcard__rows { width: 100%; }
+.bcard__rows a {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #dbe3ed;
+  color: inherit;
+  text-decoration: none;
+  font: 400 16px/20px var(--sans);
+}
+.bcard__type { width: 124px; font-weight: 500; }
+.bcard__area { flex: 1; color: #8f97a1; }
+.bcard__price { width: 124px; margin-right: 8px; text-align: right; }
+.bcard__rows img { transform: rotate(-90deg); transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.bcard__rows a:hover img { transform: rotate(-90deg) translateY(3px); }
+
+@media (max-width: 640px) {
+  .plan__bar { grid-template-columns: 1fr auto; gap: 8px; padding: 16px; }
+  .plan__bar > .queue { display: none; }
+  .plan__all .pbtn--icon { display: none; }
+}
+
+/* ---------- «Счастье в каждом кадре» (Figma 127:561) ---------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.happy {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  overflow: hidden;
+  visibility: hidden;
+  color: #fff;
+  background: #2b2420;
+}
+.happy__photo { position: absolute; inset: 0; }
+.happy__photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%; }
+.happy__photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, .6), rgba(0, 0, 0, .1) 33.973%, rgba(0, 0, 0, 0) 56.622%);
+}
+/* Кадр крыши — в эту рамку уменьшается генплан */
+.happy__thumb {
+  position: absolute;
+  left: calc(120 * var(--u));
+  top: calc(156 * var(--u));
+  width: calc(403 * var(--u));
+  height: calc(227 * var(--u));
+  margin: 0;
+  outline: 1px solid #fff;
+}
+.happy__thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Заголовок привязан к правому нижнему углу, как в макете */
+.happy__title {
+  position: absolute;
+  left: calc(100% - 552 * var(--u));
+  top: calc(100% - 297 * var(--u));
+  margin: 0;
+  font: 400 calc(99.25 * var(--u)) / calc(80.245 * var(--u)) var(--serif);
+  letter-spacing: calc(-0.9925 * var(--u));
+  white-space: nowrap;
+}
+.happy__title .line {
+  position: absolute;
+  padding: 0.12em 0.06em 0.22em;
+  margin: -0.12em -0.06em -0.22em;
+}
+.happy__l1 { left: calc(86.5 * var(--u)); top: 0; }
+.happy__l2 { left: 0; top: calc(80.245 * var(--u)); }
+.happy__l3 { left: 0; top: calc(160.49 * var(--u)); }
+.happy__cap {
+  position: absolute;
+  left: calc(38.9 * var(--u));
+  top: calc(6 * var(--u));
+  translate: -50% 0;
+  font: 400 calc(169.816 * var(--u)) / calc(113.8 * var(--u)) var(--script);
+  letter-spacing: 0;
+}
+.happy__text {
+  position: absolute;
+  left: calc(120 * var(--u));
+  bottom: calc(51 * var(--u));
+  width: calc(494 * var(--u));
+  margin: 0;
+  font: 500 calc(20 * var(--u)) / calc(26 * var(--u)) var(--sans);
 }

@@ -7,6 +7,7 @@ import { SCRIPTS } from './handwriting.js';
 import { buildBook } from './book.js';
 import { addAmbient, startAmbient, hoverEnabled } from './ambient.js';
 import { buildInfra } from './infra.js';
+import { buildPlan } from './plan.js';
 
 gsap.registerPlugin(ScrollTrigger, Flip);
 
@@ -14,6 +15,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 
+// Основной сброс — inline-скрипт в <head>; здесь — на случай, если браузер всё же успел прокрутить
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.scrollTo(0, 0);
 
@@ -119,13 +121,19 @@ function laneRect(c) {
 // Длина скролл-таймлайна в условных единицах: 0–1 — уход Hero, далее три главы,
 // потом фото третьей главы раскрывается на весь экран и превращается в альбом из трёх разворотов.
 // Следующая глава стартует через 0.3 после ухода предыдущей — фото и тексты не пересекаются.
-const STORY_LENGTH = 18.6;
+const STORY_LENGTH = 23.8; // вместе с высотой .story в style.css (2840vh)
 // Альбом закрывается: левая страница разворота 03 со всем содержимым ложится через корешок на правую,
 // показывая тёмную обложку; позади уже голубой фон карты. Закрытый альбом уходит, из фона проступает
 // карта района — сначала сверху, потом ложится в перспективу. Содержимое блока появляется само, по времени.
 const CLOSE = { at: 14.4, d: 1.4 };
 const MAP = { goneAt: CLOSE.at + CLOSE.d + 0.15, tiltAt: 16.4, tilt: 1.6 };
 const MAP_SETTLED = MAP.tiltAt + MAP.tilt;
+const PLAN = { at: 19.1, d: 1.6 }; // карта района → генплан
+const PLAN_SETTLED = PLAN.at + PLAN.d;
+const HAPPY = { at: 21.3, d: 1.8 }; // генплан уменьшается в кадр крыши блока «Счастье в каждом кадре»
+const HAPPY_SETTLED = HAPPY.at + HAPPY.d;
+let happyIntro; // заголовок и текст блока — по времени, не по скроллу
+let happyShown = false;
 let closing = false;
 const ZOOM = { at: 6.6, d: 1.3 }; // фото главы 3 → видео на весь экран (как в Getty)
 const ZOOM_END = ZOOM.at + ZOOM.d; // отсюда видео играет, а разворот 01 проявляется сам
@@ -351,6 +359,7 @@ document.body.style.overflow = '';
 lenis.start();
 const book = buildBook($('#book'));
 const infra = buildInfra($('#infra'));
+const plan = buildPlan($('#genplan'));
 const story = buildStory();
 setupAmbient();
 if (import.meta.env.DEV) Object.assign(window, { __story: story, __book: book });
@@ -414,7 +423,14 @@ function updateBook(t) {
   const isClosing = t >= CLOSE.at && t <= CLOSE.at + CLOSE.d;
   if (isClosing && !closing) book.freezeCloser();
   closing = isClosing;
-  infra.setActive(t >= MAP_SETTLED - 0.1);
+  infra.setActive(t >= MAP_SETTLED - 0.1 && t < PLAN.at);
+  plan.setActive(t >= PLAN_SETTLED - 0.1 && t < HAPPY.at);
+  const happy = t >= HAPPY_SETTLED - 0.3;
+  if (happy !== happyShown) {
+    happyShown = happy;
+    if (happy) happyIntro.play();
+    else happyIntro.reverse();
+  }
   book.setActiveLeaf(FLIPS.findIndex((f) => t >= f.at && t <= f.at + f.d));
   FLIPS.forEach((f, i) => book.renderLeaf(i, gsap.utils.clamp(0, 1, (t - f.at) / f.d)));
 }
@@ -492,6 +508,8 @@ function buildStory() {
   gsap.set(medias, { opacity: 1 });
   buildAlbum(tl);
   buildMapTransition(tl);
+  buildPlanTransition(tl);
+  buildHappyTransition(tl);
   tl.to({}, { duration: 0.01 }, STORY_LENGTH - 0.01);
   updateFlow(tl.time());
   updateBook(tl.time());
@@ -600,6 +618,83 @@ function buildMapTransition(tl) {
     .to('.btn-burger span', { backgroundColor: '#2f4765', duration: 0.5 }, MAP.goneAt)
     .to('.side-widget--light', { opacity: 0, duration: 0.5 }, MAP.goneAt)
     .to('.side-widget--map', { opacity: 1, duration: 0.5 }, MAP.goneAt);
+}
+
+/* ---------------- Переход: карта района → генплан ---------------- */
+// Карта «ныряет» к комплексу (окно карты растёт вокруг метки ЭНСО и тает), а рендер генплана
+// проступает поверх из лёгкого зума — будто камера опустилась к кварталу.
+function buildPlanTransition(tl) {
+  const p = PLAN.at;
+  const map = infra.state;
+  tl.to(map, { sc: 2.4, duration: PLAN.d, ease: 'power2.in', onUpdate: infra.touch }, p)
+    .to($$('.infra__text, .infra__marks', infra.root), { opacity: 0, duration: 0.5, ease: 'power1.in' }, p)
+    .set(plan.root, { visibility: 'visible' }, p + 0.35)
+    .fromTo(plan.root, { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, p + 0.35)
+    .fromTo(plan.scene, { scale: 1.18 }, { scale: 1, duration: PLAN.d - 0.35, ease: 'power2.out' }, p + 0.35)
+    // Хедер — белый логотип и стеклянный бургер поверх рендера, плашка справа тоже стеклянная
+    .to(logo, { backgroundColor: '#ffffff', duration: 0.5 }, p + 0.6)
+    .to('.btn-burger', { backgroundColor: 'rgba(255, 255, 255, 0.1)', boxShadow: 'inset 0 0 0 1px #a7a7a7', duration: 0.5 }, p + 0.6)
+    .to('.btn-burger span', { backgroundColor: '#ffffff', duration: 0.5 }, p + 0.6)
+    .to('.side-widget--map', { opacity: 0, duration: 0.5 }, p + 0.6)
+    .to('.side-widget--plan', { opacity: 1, duration: 0.5 }, p + 0.6);
+}
+
+/* ---------------- Переход: генплан → «Счастье в каждом кадре» ---------------- */
+// Генплан — вид сверху — уменьшается ровно в рамку кадра крыши-сада (тоже вид сверху) и в ней
+// сменяется этим кадром; позади проступает полноэкранное фото. Заголовок и текст — сами, по времени.
+function buildHappyTransition(tl) {
+  const p = HAPPY.at;
+  const root = $('#happy');
+  const thumb = $('.happy__thumb', root);
+  const photo = $('.happy__photo img', root);
+  // Куда встаёт экран генплана: масштаб «cover» в рамку, лишнее срезается clip-path
+  const fitBox = () => {
+    const W = root.clientWidth;
+    const H = root.clientHeight;
+    const w = thumb.offsetWidth;
+    const h = thumb.offsetHeight;
+    const k = Math.max(w / W, h / H);
+    const cx = (W - w / k) / 2;
+    const cy = (H - h / k) / 2;
+    return { k, cx, cy, x: thumb.offsetLeft - cx * k, y: thumb.offsetTop - cy * k };
+  };
+  const box = (key) => () => fitBox()[key];
+
+  gsap.set(plan.root, { transformOrigin: '0 0' });
+  tl.set(root, { visibility: 'visible' }, p)
+    .set(infra.root, { visibility: 'hidden' }, p)
+    .to('.plan__shade', { opacity: 0, duration: 0.4 }, p)
+    .fromTo(
+      plan.root,
+      { x: 0, y: 0, scale: 1, clipPath: 'inset(0px 0px 0px 0px)' },
+      {
+        x: box('x'),
+        y: box('y'),
+        scale: box('k'),
+        clipPath: () => { const b = fitBox(); return `inset(${b.cy}px ${b.cx}px ${b.cy}px ${b.cx}px)`; },
+        duration: 1.4,
+        ease: 'power3.inOut',
+      },
+      p,
+    )
+    // В рамке генплан сменяется кадром крыши, который лежит ровно под ним
+    .to(plan.root, { opacity: 0, duration: 0.35, ease: 'power1.inOut' }, p + 1.25)
+    .fromTo(photo, { scale: 1.12 }, { scale: 1, duration: HAPPY.d, ease: 'power2.out' }, p)
+    // Хедер: белая кнопка заявки и светлое стекло бургера, как в макете
+    .to('.btn--dark', { backgroundColor: '#ffffff', color: '#422f2c', duration: 0.5 }, p + 0.6)
+    .to('.btn-burger', { backgroundColor: 'rgba(255, 255, 255, 0.12)', boxShadow: 'inset 0 0 0 1px rgba(167, 167, 167, 0)', duration: 0.5 }, p + 0.6);
+
+  // Появление по времени: строки заголовка поднимаются из-под маски, буква «С» прописывается слева направо
+  const lines = $$('.happy__title .line__in', root);
+  const cap = $('.happy__cap', root);
+  const text = $('.happy__text', root);
+  happyIntro = gsap.timeline({ paused: true })
+    // Росчерк «С» выходит за бокс глифа — маска шире бокса
+    .fromTo(cap, { clipPath: 'inset(-30% 130% -30% -40%)' }, { clipPath: 'inset(-30% -40% -30% -40%)', duration: 0.9, ease: 'power2.inOut' }, 0)
+    .fromTo(lines, { yPercent: 110 }, { yPercent: 0, duration: 1, stagger: 0.1, ease: 'expo.out' }, 0.25)
+    .fromTo(text, { opacity: 0, y: () => 16 * su() }, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }, 0.55);
+  if (reduceMotion) happyIntro.timeScale(4);
+  happyIntro.progress(0).pause();
 }
 
 /* ---------------- Живой коллаж: мышь + покачивание ---------------- */

@@ -7,6 +7,15 @@
   <link rel="preload" href="/fonts/OpiumNew-Regular.otf" as="font" type="font/otf" crossorigin />
   <link rel="preload" href="/fonts/Gogol-Regular.otf" as="font" type="font/otf" crossorigin />
   <link rel="stylesheet" href="/src/style.css" />
+  <!-- При обновлении страница всегда открывается с первого экрана (прелоадер → Hero):
+       браузер не восстанавливает скролл, а перед уходом со страницы позиция обнуляется. -->
+  <script>
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+    addEventListener('pagehide', () => window.scrollTo(0, 0));
+    // Возврат «назад» из кеша страниц (bfcache): истории нужен чистый старт — перезагружаем
+    addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+  </script>
 </head>
 <body class="is-loading">
   <!-- Фоновый холст с карточками: стопка прелоадера → сетка Hero → фон историй -->
@@ -27,6 +36,7 @@
   <img class="side-widget" src="/img/e9c73.svg" width="40" height="92" alt="" />
   <img class="side-widget side-widget--light" src="/img/loc/ca0e4.svg" width="40" height="92" alt="" />
   <img class="side-widget side-widget--map" src="/img/map/c5355.svg" width="40" height="92" alt="" />
+  <img class="side-widget side-widget--plan" src="/img/plan/6db64.svg" width="40" height="92" alt="" />
 
   <!-- Индикатор прогресса глав -->
   <div class="progress" aria-hidden="true">
@@ -367,6 +377,111 @@
               </ul>
             </div>
           </div>
+        </section>
+
+        <!-- Генплан: 3D-вид комплекса, корпуса подсвечиваются при наведении (Figma 127:559, наведение 179:5856).
+             Сцена .plan__frame — макет 1440×900, масштаб «cover» задаёт plan.js.
+             Карточки корпусов Б и В — заглушки: в макете есть только карточка корпуса А. -->
+        <section class="plan" id="genplan" aria-label="Генплан комплекса">
+          <div class="plan__frame">
+            <div class="plan__scene">
+              <img class="plan__render" src="/img/plan/genplan.webp" srcset="/img/plan/genplan-1600.webp 1600w, /img/plan/genplan.webp 2880w" sizes="max(112vw, 178vh)" width="1599" height="900" alt="Квартал ЭНСО с высоты: две башни и малоэтажный корпус среди деревьев" />
+              <svg class="plan__contours" viewBox="0 0 1440 900" aria-hidden="true">
+                <defs>
+                  <path id="bld-a" d="M27.4567 62.3707C27.4567 57.6251 49.8288 54.2354 69.1501 48.8118L91.5222 24.4059C95.2509 20.3383 101.013 18.6434 107.115 20.6772C128.131 25.4228 152.537 37.9648 176.265 47.456L241.347 56.6082C253.211 58.303 263.72 60.3369 265.075 65.7604L264.737 89.4884L262.703 91.5222V131.86C265.753 133.555 266.77 135.588 266.431 139.317V144.063L263.042 146.436V180.333C265.753 182.028 266.77 184.4 266.431 187.112V191.858L263.042 194.569V231.856C265.753 233.89 266.77 236.263 266.431 239.314V243.381L263.042 246.432V279.651C265.753 281.685 266.77 284.397 266.431 287.448V291.515L263.042 294.566V326.768C265.753 329.141 266.77 331.853 266.431 334.565V338.293L263.042 341.344V375.919C265.753 378.292 266.77 380.665 266.431 383.715V387.783L263.042 390.495V425.07C265.753 427.443 266.77 429.815 266.431 432.866V436.595L263.042 439.307V474.221C265.753 476.593 266.77 478.966 266.431 482.017V486.085L263.042 488.796V522.694C265.753 525.066 266.77 527.778 266.431 530.49V534.219L262.364 537.269V547.438L197.281 581.336C190.502 585.403 183.383 587.437 175.587 585.403L28.8125 540.659V538.625L27.4567 537.608V530.829L30.5074 528.117V487.102L27.4567 485.407V478.966L30.5074 475.916V438.629L27.4567 436.595V429.138L30.5074 426.087V390.834L27.4567 388.8V382.021L30.5074 379.309V341.344L27.4567 339.31V331.853L30.5074 329.141V292.532L27.4567 290.498V283.041L30.5074 280.329V244.059L27.4567 242.364V235.585L30.5074 232.534V195.925L27.4567 193.892V187.112L30.5074 183.722V147.452L27.4567 145.419V138.3L30.5074 134.572V92.5391C27.7956 91.5222 27.1177 88.4715 27.4567 85.0818V62.3707Z" />
+                  <clipPath id="bld-a-in"><use href="#bld-a" /></clipPath>
+                  <path id="bld-b" d="M7.75943 37.7391L69.4822 33.1539L131.91 0L199.276 58.5485L239.484 74.7727L241.601 152.367L241.953 200.687V292.742L250.065 299.091L250.418 565.381L226.787 575.256L213.032 578.431L197.513 580.547L189.401 579.841L180.23 574.551L172.471 577.02L164.712 585.132L153.072 589.717L139.317 593.597L117.097 599.593L0 530.816V257.825L6.70133 250.771V216.911L1.41081 214.09V107.927L7.05403 104.752L7.75943 37.7391Z" />
+                  <clipPath id="bld-b-in"><use href="#bld-b" /></clipPath>
+                  <path id="bld-c" d="M40.4736 27.4397L86.4351 0L118.334 10.6329L130.339 7.88892L173.213 19.8938L173.556 28.8117L238.383 44.9325C241.127 45.6185 242.842 46.6475 242.156 49.0485V85.7491L244.899 87.1211V95.353L242.499 97.411V119.02L245.242 120.392V128.624L242.842 130.682V151.947L245.585 153.662V161.894L243.185 164.295V184.875L245.928 186.59V194.822L243.527 197.223V219.175L242.156 224.663L202.711 238.383C198.595 240.441 194.822 241.127 190.363 240.098L0 185.218V180.416L2.74397 179.044V156.749L4.80195 155.034V148.174L11.3189 144.059V123.822L13.3769 122.107V114.218L20.5798 110.102V89.1791L23.3238 87.4641V79.5752L34.2996 73.0583L40.4736 68.5993V27.4397Z" />
+                  <clipPath id="bld-c-in"><use href="#bld-c" /></clipPath>
+                </defs>
+                <g class="bld" data-building="a" transform="translate(589 169)"><use class="bld__fill" href="#bld-a" /><use class="bld__line" href="#bld-a" clip-path="url(#bld-a-in)" /></g>
+                <g class="bld" data-building="b" transform="translate(888.355 43.776)"><use class="bld__fill" href="#bld-b" /><use class="bld__line" href="#bld-b" clip-path="url(#bld-b-in)" /></g>
+                <g class="bld" data-building="c" transform="translate(296.963 415.791)"><use class="bld__fill" href="#bld-c" /><use class="bld__line" href="#bld-c" clip-path="url(#bld-c-in)" /></g>
+              </svg>
+              <button class="plan__key" type="button" style="left: 529px; top: 235px" data-building="c" aria-expanded="false" aria-controls="bcard-c" aria-label="Корпус В: квартиры"><img src="/img/plan/ef866.svg" width="64" height="64" alt="" /></button>
+              <button class="plan__key" type="button" style="left: 194px; top: 428px" data-building="c" aria-expanded="false" aria-controls="bcard-c" aria-label="Корпус В: квартиры"><img src="/img/plan/ef866.svg" width="64" height="64" alt="" /></button>
+              <button class="plan__key" type="button" style="left: 511px; top: 536px" data-building="c" aria-expanded="false" aria-controls="bcard-c" aria-label="Корпус В: квартиры"><img src="/img/plan/ef866.svg" width="64" height="64" alt="" /></button>
+              <button class="plan__key" type="button" style="left: 816px; top: 430px" data-building="a" aria-expanded="false" aria-controls="bcard-a" aria-label="Корпус А: квартиры"><img src="/img/plan/ef866.svg" width="64" height="64" alt="" /></button>
+              <button class="plan__key" type="button" style="left: 1089px; top: 330px" data-building="b" aria-expanded="false" aria-controls="bcard-b" aria-label="Корпус Б: квартиры"><img src="/img/plan/ef866.svg" width="64" height="64" alt="" /></button>
+            </div>
+          </div>
+          <i class="plan__shade" aria-hidden="true"><img src="/img/plan/6a17c.svg" alt="" /></i>
+
+          <div class="plan__bar">
+            <div class="seg" role="group" aria-label="Вид генплана">
+              <button class="seg__btn is-on" type="button" aria-pressed="true">3D-план</button>
+              <button class="seg__btn" type="button" aria-pressed="false">2D-план</button>
+            </div>
+            <div class="queue" role="group" aria-label="Очередь">
+              <button class="queue__arrow queue__arrow--prev" type="button" aria-label="Предыдущая очередь" disabled><img src="/img/plan/38cc6.svg" width="9" height="10" alt="" /></button>
+              <span class="queue__name">ЖК-1</span>
+              <button class="queue__arrow" type="button" aria-label="Следующая очередь" disabled><img src="/img/plan/af721.svg" width="9" height="10" alt="" /></button>
+            </div>
+            <div class="plan__all">
+              <a class="pbtn pbtn--light" href="#apartments">Все квартиры</a>
+              <a class="pbtn pbtn--light pbtn--icon" href="#apartments" aria-hidden="true" tabindex="-1"><img src="/img/plan/94cc4.svg" width="20" height="20" alt="" /></a>
+            </div>
+          </div>
+
+          <article class="bcard" id="bcard-a" data-building="a" hidden aria-labelledby="bcard-a-t">
+            <header class="bcard__head">
+              <h3 class="bcard__title" id="bcard-a-t">Корпус А</h3>
+              <span class="bcard__sale">-14%</span>
+            </header>
+            <ul class="bcard__badges"><li>Сдан</li><li>25 этажей</li></ul>
+            <ul class="bcard__rows">
+              <li><a href="#apartments"><span class="bcard__type">1-комнатные</span><span class="bcard__area">от 43,6 м²</span><span class="bcard__price">от 27,68 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">2-комнатные</span><span class="bcard__area">от 65,6 м²</span><span class="bcard__price">от 38,1 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">3-комнатные</span><span class="bcard__area">от 106,5 м²</span><span class="bcard__price">от 57,47 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">4-комнатные</span><span class="bcard__area">от 114,4 м²</span><span class="bcard__price">от 62,56 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+            </ul>
+            <a class="pbtn pbtn--navy" href="#apartments">Выбрать квартиру</a>
+          </article>
+
+          <article class="bcard" id="bcard-b" data-building="b" hidden aria-labelledby="bcard-b-t">
+            <header class="bcard__head">
+              <h3 class="bcard__title" id="bcard-b-t">Корпус Б</h3>
+            </header>
+            <ul class="bcard__badges"><li>Сдача в IV кв. 2027</li><li>28 этажей</li></ul>
+            <ul class="bcard__rows">
+              <li><a href="#apartments"><span class="bcard__type">1-комнатные</span><span class="bcard__area">от 41,2 м²</span><span class="bcard__price">от 25,90 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">2-комнатные</span><span class="bcard__area">от 62,8 м²</span><span class="bcard__price">от 36,40 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">3-комнатные</span><span class="bcard__area">от 98,3 м²</span><span class="bcard__price">от 52,10 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+            </ul>
+            <a class="pbtn pbtn--navy" href="#apartments">Выбрать квартиру</a>
+          </article>
+
+          <article class="bcard" id="bcard-c" data-building="c" hidden aria-labelledby="bcard-c-t">
+            <header class="bcard__head">
+              <h3 class="bcard__title" id="bcard-c-t">Корпус В</h3>
+              <span class="bcard__sale">-8%</span>
+            </header>
+            <ul class="bcard__badges"><li>Сдан</li><li>12 этажей</li></ul>
+            <ul class="bcard__rows">
+              <li><a href="#apartments"><span class="bcard__type">Студии</span><span class="bcard__area">от 28,4 м²</span><span class="bcard__price">от 17,30 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">1-комнатные</span><span class="bcard__area">от 39,9 м²</span><span class="bcard__price">от 24,20 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+              <li><a href="#apartments"><span class="bcard__type">2-комнатные</span><span class="bcard__area">от 58,1 м²</span><span class="bcard__price">от 33,75 млн ₽</span><img src="/img/plan/f5649.svg" width="20" height="20" alt="" /></a></li>
+            </ul>
+            <a class="pbtn pbtn--navy" href="#apartments">Выбрать квартиру</a>
+          </article>
+        </section>
+
+        <!-- «Счастье в каждом кадре» (Figma 127:561): полноэкранное фото, кадр крыши-сада в белой рамке.
+             Генплан уменьшается ровно в эту рамку и сменяется кадром крыши (main.js). -->
+        <section class="happy" id="happy" aria-labelledby="happy-title">
+          <div class="happy__photo">
+            <img src="/img/happy/happy.webp" srcset="/img/happy/happy-1440.webp 1440w, /img/happy/happy.webp 2560w" sizes="max(100vw, 130vh)" width="2560" height="1978" alt="Девушка обнимает золотистого ретривера у окна" />
+          </div>
+          <figure class="happy__thumb"><img src="/img/happy/roof.webp" width="806" height="454" alt="Сад на крыше корпуса с местами для отдыха" /></figure>
+          <h2 class="happy__title" id="happy-title">
+            <span class="happy__cap" aria-hidden="true">С</span>
+            <span class="line happy__l1" aria-hidden="true"><span class="line__in">частье</span></span>
+            <span class="line happy__l2" aria-hidden="true"><span class="line__in">в каждом</span></span>
+            <span class="line happy__l3" aria-hidden="true"><span class="line__in">кадре</span></span>
+            <span class="visually-hidden">Счастье в каждом кадре</span>
+          </h2>
+          <p class="happy__text">Среда, где архитектура работает на&nbsp;ваш комфорт. Камерный двор-сад, светлые входные группы, подземный паркинг со&nbsp;спуском на&nbsp;лифте и&nbsp;сервисы у&nbsp;порога&nbsp;— тихое убежище от&nbsp;городского ритма, созданное для&nbsp;вас.</p>
         </section>
       </div>
     </section>
