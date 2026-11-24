@@ -1,3 +1,4 @@
+import { installTypography } from './typography.js';
 import { buildNavThemes } from './nav-themes.js';
 import gsap from 'gsap';
 import { buildRequestForm } from './request-form.js';
@@ -14,6 +15,7 @@ import { buildInfra } from './infra.js';
 import { buildPlan } from './plan.js';
 
 gsap.registerPlugin(ScrollTrigger, Flip);
+installTypography();
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (s, root = document) => root.querySelector(s);
