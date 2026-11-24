@@ -1406,3 +1406,19 @@ body:not(.scroll-ready) #advantages { visibility: hidden; }
  .request-section__script-line--middle { left: 50%; top: 77%; }
  .request-section__script-line--last { left: 53%; top: 85%; }
 }
+
+/* Форма 183:7086: размеры и вертикальный ритм масштабируются вместе. */
+@media(min-width:701px) {
+ .request-section { height: 100svh; min-height: 100svh; padding: 0; }
+ .request-section__body { position: absolute; left: 50%; top: calc(153 * var(--form-unit)); width: calc(636.946 * var(--form-unit)); margin: 0; transform: translateX(-50%); }
+ .request-section h2 { font-size: calc(80 * var(--form-unit)); line-height: calc(68 * var(--form-unit)); letter-spacing: calc(-1.6 * var(--form-unit)); }
+ .request-section__body > p { max-width: calc(488.02 * var(--form-unit)); margin: calc(36.659 * var(--form-unit)) auto 0; font-size: calc(20 * var(--form-unit)); line-height: calc(24 * var(--form-unit)); }
+ .request-section form { position: absolute; left: 50%; top: calc(268.66 * var(--form-unit)); width: calc(547 * var(--form-unit)); margin: 0; transform: translateX(-50%); }
+ .request-section input { height: calc(73.318 * var(--form-unit)); font-size: calc(20 * var(--form-unit)); line-height: calc(24 * var(--form-unit)); }
+ .request-section label + label { margin-top: calc(9.165 * var(--form-unit)); }
+ .request-section__submit { margin-top: calc(40 * var(--form-unit)); height: calc(64 * var(--form-unit)); padding: 0 calc(40 * var(--form-unit)); font-size: calc(20 * var(--form-unit)); line-height: calc(24 * var(--form-unit)); }
+ .request-section small { position: absolute; bottom: calc(20 * var(--form-unit)); left: 0; width: 100%; margin: 0; font-size: calc(16 * var(--form-unit)); line-height: calc(20 * var(--form-unit)); }
+ .request-section__script-line--first { top: calc(50% + 140 * var(--form-unit)); }
+ .request-section__script-line--middle { top: calc(50% + 205 * var(--form-unit)); }
+ .request-section__script-line--last { top: calc(50% + 260 * var(--form-unit)); }
+}
