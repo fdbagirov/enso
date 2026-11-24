@@ -350,3 +350,9 @@
 .apartment__info i, .apartment__info strong { margin: 0; font: 400 calc(62.367 * var(--card-unit))/1 var(--script); letter-spacing: 0; text-box-trim: trim-both; text-box-edge: cap alphabetic; }
 .apartment__info strong { display: block; }
 .apartment__info sup { font: 400 calc(32 * var(--card-unit))/1 var(--script); vertical-align: super; position: relative; top: -.1em; }
+
+/* В макете между первыми строками -2px, перед площадью — 6px. */
+.apartment__info { gap: 0; }
+.apartment__info > span { height: calc(44.548 * var(--card-unit)); align-items: center; }
+.apartment__info > span:first-child { margin-bottom: calc(-2 * var(--card-unit)); }
+.apartment__info strong { margin-top: calc(6 * var(--card-unit)); }

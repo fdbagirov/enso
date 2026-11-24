@@ -1431,3 +1431,13 @@ body:not(.scroll-ready) #advantages { visibility: hidden; }
 .photo--face .photo__cover { object-position: center; }
 .collage-item-inner.photo--district { height: calc(321.13 * var(--u)); }
 .photo__cover--couple { object-position: 50% 25%; }
+
+/* Точные рамки и заполнение фотографий из 129:1591 и 129:1625. */
+.collage-item-inner.photo--face { width: 100%; height: 100%; }
+.photo--face .photo__cover { object-fit: fill; object-position: bottom; }
+.collage-item-inner.photo--district { height: 100%; }
+.photo--district .photo__cover { object-fit: fill; object-position: bottom; }
+/* 183:7086: первые две строки вращаются единым текстовым блоком. */
+.request-section__script-line--first { top: calc(50% + 108.34 * var(--form-unit)); height: calc(254.294 * var(--form-unit)); }
+.request-section__script-line--last { top: calc(50% + 231.34 * var(--form-unit)); height: calc(203.004 * var(--form-unit)); }
+.request-section__script-line i { white-space: normal; line-height: calc(54.301 * var(--form-unit)); }
