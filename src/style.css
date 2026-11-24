@@ -1396,3 +1396,13 @@ body:not(.scroll-ready) #advantages { visibility: hidden; }
 /* GSAP entrance resets individual transforms inline; keep pointer drift independent. */
 .request-section__picture { translate: calc(var(--drift-x, 0) * 1px) calc((var(--drift-y, 0) + var(--float-y, 0)) * 1px) !important; }
 .request-section__script-line i { white-space: nowrap; }
+
+/* Подпись формы: три отдельные строки, как в макете. */
+.request-section__script-line--first { top: calc(50% + 80 * var(--form-unit)); height: calc(120 * var(--form-unit)); }
+.request-section__script-line--middle { left: calc(50% + 133.67 * var(--form-unit)); top: calc(50% + 160 * var(--form-unit)); width: calc(491.844 * var(--form-unit)); height: calc(140 * var(--form-unit)); margin-left: calc(-245.922 * var(--form-unit)) !important; }
+.request-section__script-line--last { top: calc(50% + 250 * var(--form-unit)); height: calc(140 * var(--form-unit)); }
+@media(max-width:700px) {
+ .request-section__script-line--first { left: 50%; top: 69%; }
+ .request-section__script-line--middle { left: 50%; top: 77%; }
+ .request-section__script-line--last { left: 53%; top: 85%; }
+}

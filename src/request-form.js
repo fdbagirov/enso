@@ -27,7 +27,7 @@ export function buildRequestForm(lenis) {
         <button class="request-section__submit" type="submit">Отправить</button>
         <p role="status" class="request-section__status"></p>
       </form>
-    </div><div class="request-section__script" aria-hidden="true"><span class="request-section__script-line request-section__script-line--first"><i>Ваш осознанный</i></span><span class="request-section__script-line request-section__script-line--last"><i>выбор</i></span></div><small>© ЖК «ЭНСО», 2026</small>`;
+    </div><div class="request-section__script" aria-hidden="true"><span class="request-section__script-line request-section__script-line--first"><i>Ваш</i></span><span class="request-section__script-line request-section__script-line--middle"><i>осознанный</i></span><span class="request-section__script-line request-section__script-line--last"><i>выбор</i></span></div><small>© ЖК «ЭНСО», 2026</small>`;
   document.querySelector('#apartments').after(section);
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href="#request"]');
