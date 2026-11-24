@@ -1441,3 +1441,16 @@ body:not(.scroll-ready) #advantages { visibility: hidden; }
 .request-section__script-line--first { top: calc(50% + 108.34 * var(--form-unit)); height: calc(254.294 * var(--form-unit)); }
 .request-section__script-line--last { top: calc(50% + 231.34 * var(--form-unit)); height: calc(203.004 * var(--form-unit)); }
 .request-section__script-line i { white-space: normal; line-height: calc(54.301 * var(--form-unit)); }
+
+/* Мобильная заглушка 285:143, до 768px вместо интерактивного прототипа. */
+.mobile-notice { display: none; }
+@media(max-width:767px) {
+ html, body { min-width: 0; min-height: 100svh; overflow: hidden; background: #fdf1e5; }
+ body > :not(.mobile-notice) { display: none !important; }
+ .mobile-notice { display: block; position: fixed; inset: 0; overflow-y: auto; background: #fdf1e5; color: #422f2c; }
+ .mobile-notice__logo { position: absolute; top: 24px; left: calc(50% + 1.23px); transform: translateX(-50%); width: 102.464px; height: 19px; }
+ .mobile-notice__content { display: flex; flex-direction: column; align-items: center; position: absolute; top: 151px; left: 0; width: 100%; padding-bottom: 32px; text-align: center; }
+ .mobile-notice__content > img { flex: none; width: 28px; height: 36px; margin-bottom: 16px; }
+ .mobile-notice h1 { width: min(342px, calc(100% - 18px)); margin: 0; font: 400 36px/40px var(--serif); letter-spacing: -.72px; }
+ .mobile-notice p { width: min(304px, calc(100% - 40px)); margin: 12px 0 0; opacity: .5; font: 400 16px/22px var(--sans); }
+}

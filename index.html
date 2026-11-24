@@ -23,6 +23,14 @@
   <link rel="stylesheet" href="/src/showcase.css?v=26">
 </head>
 <body class="is-loading">
+  <section class="mobile-notice" aria-labelledby="mobile-notice-title">
+    <img class="mobile-notice__logo" src="/img/mobile/logo.svg" width="102.464" height="19" alt="ЭНСО">
+    <div class="mobile-notice__content">
+      <img src="/img/mobile/lock.svg" width="28" height="36" alt="">
+      <h1 id="mobile-notice-title">Доступно только<br>в&nbsp;десктоп-версии</h1>
+      <p>Чтобы посмотреть интерактивный прототип, пожалуйста, откройте эту ссылку на&nbsp;компьютере или ноутбуке.</p>
+    </div>
+  </section>
   <!-- Фоновый холст с карточками: стопка прелоадера → сетка Hero → фон историй -->
   <div class="canvas is-preloading" id="canvas" aria-hidden="true"></div>
 
@@ -643,7 +651,6 @@
     </section>
   </main>
 
-  <script type="module" src="/src/main.js?v=nav-figma-colors-29"></script>
-  <script type="module" src="/src/showcase.js"></script>
+  <script type="module" src="/src/bootstrap.js"></script>
 </body>
 </html>
