@@ -68,7 +68,7 @@ export function buildInfra(root) {
   });
   const places = [...root.querySelectorAll('.place')];
   const pins = [...root.querySelectorAll('.mk--pin')];
-  const photos = [...root.querySelectorAll('.mk--photo')];
+  const photos = new Map([...root.querySelectorAll('.mk--photo')].map((photo) => [Number(photo.dataset.place), photo]));
 
   // Состояние карты: rx/rz — повороты (скролл-переход), sc — масштаб окна карты; tilt — от мыши
   const state = { rx: REST.rx, rz: REST.rz, sc: 1, op: 1 };
@@ -127,25 +127,42 @@ export function buildInfra(root) {
       const on = k === i;
       p.classList.toggle('is-active', on);
       p.querySelector('.place__name').setAttribute('aria-expanded', on);
-      gsap.to(p.querySelector('.place__more'), { height: on ? 'auto' : 0, duration: 0.6, ease: 'power3.inOut', overwrite: true });
+      gsap.to(p.querySelector('.place__more'), { height: on ? 'auto' : 0, duration: reduceMotion ? 0 : 0.35, ease: 'power2.out', overwrite: true });
     });
-    pins.forEach((pin, k) => pin.classList.toggle('is-on', k === i));
+    pins.forEach(pin => pin.classList.toggle('is-on', Number(pin.dataset.place) === i));
     if (prev >= 0) {
       gsap.to(ovals[prev], { opacity: 0, duration: 0.3, overwrite: true });
-      gsap.to(photos[prev], { opacity: 0, scale: 0.96, y: 8, duration: 0.35, ease: 'power2.in', overwrite: true });
+      if (photos.has(prev)) gsap.to(photos.get(prev), { opacity: 0, scale: 0.96, y: 8, duration: 0.35, ease: 'power2.in', overwrite: true });
     }
     if (i >= 0) {
       gsap.fromTo(ovals[i], { opacity: 1, strokeDashoffset: (k, p) => p.dataset.len }, { strokeDashoffset: 0, duration: 0.9, ease: 'power2.inOut', overwrite: true });
-      gsap.fromTo(photos[i], { opacity: 0, scale: 0.94, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: 0.7, delay: 0.1, ease: 'power3.out', overwrite: true });
+      if (photos.has(i)) gsap.fromTo(photos.get(i), { opacity: 0, scale: 0.94, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: reduceMotion ? 0 : 0.4, ease: 'power2.out', overwrite: true });
     }
   }
   const bind = (el, i) => {
     el.addEventListener('click', () => select(i));
     el.addEventListener('focus', () => select(i));
-    if (canHover) el.addEventListener('mouseenter', () => select(i));
+
   };
   places.forEach((p, i) => bind(p.querySelector('.place__name'), i));
   pins.forEach((pin) => bind(pin, Number(pin.dataset.place)));
+  if (canHover) {
+    // Only actual pointer movement changes the hover selection. Collapsing
+    // rows can move a heading under the stationary cursor; mouseleave/enter
+    // from that layout change must not cancel the newly opened row.
+    root.addEventListener('pointermove', event => {
+      if (event.pointerType !== 'mouse') return;
+      const pin = event.target.closest('.mk--pin');
+      const place = event.target.closest('.place');
+      if (pin) select(Number(pin.dataset.place));
+      else if (place) select(places.indexOf(place));
+      else select(-1);
+    });
+    root.addEventListener('pointerleave', () => select(-1));
+  }
+  root.addEventListener('focusout', event => {
+    if (!root.contains(event.relatedTarget)) select(-1);
+  });
 
   /* Появление содержимого: само, по времени, когда карта легла в перспективу */
   const intro = gsap.timeline({ paused: true });

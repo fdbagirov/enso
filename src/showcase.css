@@ -1,0 +1,345 @@
+.advantages, .apartments {
+  position: relative;
+  z-index: 5;
+  background: var(--bg);
+}
+
+.advantages {
+  --detail-unit: calc(100vw / 1440);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100svh;
+  overflow: clip;
+}
+
+.advantages__body {
+  align-self: center;
+  padding: 104px 24px 56px 8.333vw;
+}
+
+.advantages__body > .tag { display: inline-flex; }
+.advantages__choices {
+  display: grid;
+  gap: clamp(18px, 2.78vw, 40px);
+  margin-top: 32px;
+}
+.advantages__choice button, .advantages__label {
+  position: relative;
+  display: block;
+  width: fit-content;
+  text-align: left;
+  font: 400 clamp(25px, 3.333vw, 48px)/1.083 var(--serif);
+  letter-spacing: -.01em;
+  color: #887169;
+}
+.advantages__choice br { display: none; }
+.advantages__choice button[aria-expanded="true"] br { display: initial; }
+.advantages__choice button[aria-expanded="true"] { color: var(--ink); }
+.advantages__choice p {
+  max-width: 423px;
+  margin: clamp(20px, 2.78vw, 40px) 0 0;
+  font: 400 clamp(13px, 1.111vw, 16px)/1.5 var(--sans);
+}
+.advantages__label { margin: 0; }
+.advantages__short-label, [aria-expanded="true"] .advantages__long-label { display: inline; }
+.advantages__long-label, [aria-expanded="true"] .advantages__short-label { display: none; }
+.advantages__oval {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  top: 50%;
+  left: 45%;
+  max-width: none;
+  width: max(112%, 142px);
+  transform: translate(-50%, -50%) rotate(-6deg) scaleY(-1);
+}
+.advantages__choice:first-child .advantages__oval { width: 145%; left: 54%; }
+[aria-expanded="true"] .advantages__oval { display: block; }
+
+.advantages__visuals { position: relative; min-width: 0; overflow: hidden; }
+.advantages__visual {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity .55s ease;
+}
+.advantages__visual.is-active { opacity: 1; z-index: 1; }
+.advantages__image { position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: center bottom; }
+.advantages__visual:nth-child(2) .advantages__image {
+  left: -16.86%; top: -.78%; width: 116.81%; height: 104.37%; object-fit: fill;
+}
+.advantages__visual:nth-child(3) .advantages__image {
+  left: -5.67%; top: -4.63%; width: 133.64%; height: 106.91%; object-fit: fill;
+}
+.advantages__glow {
+  position: absolute;
+  width: calc(790.6 * var(--detail-unit));
+  right: calc(-222 * var(--detail-unit));
+  bottom: calc(-228 * var(--detail-unit));
+  pointer-events: none;
+}
+.advantages__visual figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 8%;
+  width: 60%;
+  text-align: center;
+  color: white;
+  font: 400 clamp(34px, 5.98vw, 86px)/.71 var(--script);
+  transform: rotate(-15deg);
+}
+
+.apartments {
+  --card-unit: min(calc(100vw / 1440), 1px);
+  display: grid;
+  align-content: start;
+  gap: calc(32 * var(--card-unit));
+  min-height: 100svh;
+  padding: max(80px, calc(104 * var(--card-unit))) 0 24px;
+}
+.apartments h2 {
+  width: min(854px, 70%);
+  margin: 0 auto calc(18 * var(--card-unit));
+  text-align: center;
+  font: 400 clamp(30px, 4.444vw, 64px)/.94 var(--serif);
+  letter-spacing: -.01em;
+}
+.apartments__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 24px;
+  row-gap: 8px;
+  padding-inline: 14px;
+}
+.apartments__filters button {
+  position: relative;
+  padding-block: 4px;
+  color: #7b6761;
+  font-size: clamp(12px, 1.111vw, 16px);
+  font-weight: 500;
+}
+.apartments__filters button + button::before {
+  position: absolute;
+  top: 50%;
+  left: -13px;
+  width: 1px;
+  height: 16px;
+  background: url('/img/showcase/132c4.svg') center / 16px 1px;
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: center;
+  content: '';
+}
+.apartments__filters [aria-pressed="true"] { color: var(--ink); }
+.apartments__filters [aria-pressed="true"]::after {
+  position: absolute;
+  inset: -6px -15px;
+  background: url('/img/showcase/b1f78.svg') center / 100% 100% no-repeat;
+  pointer-events: none;
+  content: '';
+}
+.apartments__gallery {
+  display: flex;
+  margin-inline: 24px;
+  border: 1px solid var(--line-soft);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.apartments__gallery::-webkit-scrollbar { display: none; }
+.apartment {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 calc(100% / 3);
+  min-width: 0;
+  padding: calc(15.5 * var(--card-unit)) calc(15.5 * var(--card-unit)) calc(36 * var(--card-unit));
+  scroll-snap-align: start;
+}
+.apartment + .apartment { border-left: 1px solid var(--line-soft); }
+.apartment[hidden] { display: none; }
+.apartment__meta {
+  display: flex;
+  align-items: center;
+  gap: clamp(5px, .83vw, 12px);
+  white-space: nowrap;
+  font: 500 clamp(11px, 1.111vw, 16px)/24px var(--sans);
+}
+.apartment__meta > span:nth-child(2) { opacity: .6; }
+.apartment__icons { display: flex; gap: 8px; margin-left: auto; }
+.apartment__icons img { width: clamp(14px, 1.667vw, 24px); height: auto; }
+.apartment__drawing {
+  position: relative;
+  width: min(100%, calc(440 * var(--card-unit)));
+  height: calc(309 * var(--card-unit));
+  margin: calc(24 * var(--card-unit)) auto calc(12 * var(--card-unit));
+  overflow: hidden;
+}
+.apartment__drawing img {
+  position: absolute;
+  inset: var(--drawing-top) auto auto var(--drawing-left);
+  width: var(--drawing-width);
+  height: var(--drawing-height);
+  max-width: none;
+}
+.apartment--1 { --drawing-top: 12.43%; --drawing-left: 13.31%; --drawing-width: 71.58%; --drawing-height: 75.15%; }
+.apartment--2 { --drawing-top: 0%; --drawing-left: 25.34%; --drawing-width: 52.82%; --drawing-height: 100%; }
+.apartment--3 { --drawing-top: 3.33%; --drawing-left: 19.4%; --drawing-width: 59.69%; --drawing-height: 93.33%; }
+.apartment--4 { --drawing-top: -2.91%; --drawing-left: -2.4%; --drawing-width: 89.36%; --drawing-height: 98.11%; }
+.apartment--5 { --drawing-top: 0%; --drawing-left: 2.94%; --drawing-width: 80.67%; --drawing-height: 100%; }
+.apartment--6 { --drawing-top: -7.51%; --drawing-left: 1.24%; --drawing-width: 97.58%; --drawing-height: 107.48%; }
+.apartment__info {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  text-align: center;
+  font: 400 clamp(20px, 2.64vw, 38px)/1.03 var(--serif);
+  white-space: nowrap;
+}
+.apartment__info i, .apartment__info strong {
+  font: 400 1.25em/.9 var(--script);
+}
+.apartment__info strong { margin-top: .15em; font-size: 1.6em; }
+.apartments__footer { display: flex; justify-content: space-between; padding-inline: 24px; gap: 12px; }
+.apartments__all, .apartments__controls { display: flex; gap: 4px; }
+.apartments__all button {
+  height: 48px;
+  padding-inline: 24px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+}
+.apartments__all button + button {
+  display: grid;
+  width: 48px;
+  padding: 0;
+  place-items: center;
+}
+.apartments__all img { transform: rotate(-90deg); }
+.apartments__controls { gap: 0; border-radius: 12px; background: var(--veil); }
+.apartments__controls button { width: 50px; height: 48px; font-size: 24px; }
+.apartments__controls button:disabled { opacity: .42; cursor: default; }
+
+@media (max-width: 700px) {
+  .advantages { --detail-unit: calc(100vw / 720); grid-template-columns: 1fr; }
+  .advantages__body { padding: 88px 24px 36px; }
+  .advantages__visuals { min-height: min(72svh, 112vw); }
+  .advantages__visual figcaption { right: 3%; }
+  .apartments { --card-unit: min(calc(100vw / 460), 1px); }
+  .apartments h2 { width: 90%; }
+  .apartments__gallery { margin-inline: 14px; }
+  .apartment { flex-basis: 100%; }
+  .apartments__footer { padding-inline: 14px; }
+  .apartments__all button { padding-inline: 12px; font-size: 13px; }
+  .apartments__controls button { width: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .advantages__visual { transition: none; }
+}
+
+.apartments__controls {
+  background: url('/img/showcase/b699b.svg') center / 100% 100% no-repeat;
+}
+.apartments__controls span { visibility: hidden; }
+.apartments__controls button:disabled { background: color-mix(in srgb, var(--bg) 65%, transparent); }
+
+.advantages__visuals {
+  height: 100svh;
+  align-self: start;
+}
+.advantages .advantages__visual .advantages__image {
+  inset: -34px 0 auto;
+  width: 100%;
+  height: calc(100% + 68px);
+  object-fit: cover;
+  object-position: center;
+}
+
+.advantages__choice p { margin: 0; padding-top: 0; }
+.advantages__choice button[aria-expanded="true"] + p { padding-top: clamp(20px, 2.78vw, 40px); }
+.advantages__short-label { display: none; }
+.advantages__long-label { display: inline; }
+
+/* Преимущества целиком занимают один экран на десктопе. */
+@media (min-width: 701px) {
+  #advantages { height: 100svh; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .advantages__body { min-height: 0; padding-top: clamp(48px, 8svh, 104px); padding-bottom: clamp(24px, 4svh, 56px); }
+  .advantages__visuals { height: 100%; min-height: 0; align-self: stretch; }
+  .advantages__choices { gap: clamp(12px, 3svh, 40px); margin-top: clamp(16px, 3svh, 32px); }
+  .advantages__choice button, .advantages__label { font-size: clamp(25px, min(3.333vw, 5.2svh), 48px); }
+  .advantages__choice button[aria-expanded="true"] + p { padding-top: clamp(12px, 2.4svh, 32px); }
+}
+
+/* Общая геометрия и поведение аккордеонов инфраструктуры и преимуществ. */
+.advantages__body > .tag { height: 36px; padding: 8px 20px; border: 1px solid #dacac8; border-radius: 100px; font: 500 14px/20px var(--sans); letter-spacing: 0; }
+.advantages__detail { height: 0; overflow: hidden; }
+.advantages__detail > p { margin: 0; padding-top: 40px; }
+.advantages__choice button { width: 100%; }
+.advantages__choice button[aria-expanded="false"], .advantages__label { color: #6a534a; opacity: .8; }
+.advantages__choice button[aria-expanded="true"] { opacity: 1; }
+@media(min-width:701px) {
+  .advantages { --accordion-unit: min(calc(100vw / 1440), calc(100svh / 900)); }
+  .advantages__body { position: absolute; left: calc(50% - 600 * var(--accordion-unit)); top: calc(50% - 322 * var(--accordion-unit)); width: calc(462 * var(--accordion-unit)); padding: 0; }
+  .advantages__body > .tag { height: calc(36 * var(--accordion-unit)); padding: calc(8 * var(--accordion-unit)) calc(20 * var(--accordion-unit)); border-radius: calc(100 * var(--accordion-unit)); font-size: calc(14 * var(--accordion-unit)); line-height: calc(20 * var(--accordion-unit)); }
+  .advantages__choices { margin-top: calc(32 * var(--accordion-unit)); gap: calc(40 * var(--accordion-unit)); }
+  .advantages__choice button, .advantages__label { font-size: calc(48 * var(--accordion-unit)); line-height: calc(52 * var(--accordion-unit)); letter-spacing: calc(-.48 * var(--accordion-unit)); }
+  .advantages__detail > p { width: calc(423 * var(--accordion-unit)); max-width: none; padding-top: calc(40 * var(--accordion-unit)); font-size: calc(16 * var(--accordion-unit)); line-height: calc(24 * var(--accordion-unit)); }
+  .advantages__visuals { grid-column: 2; }
+}
+
+/* Отступ описания не должен перекрываться общим правилом .advantages__choice p. */
+.advantages__choice .advantages__detail > p { margin: 0; padding-top: 40px; }
+.advantages__choice:first-child .advantages__oval {
+  width: 395.599px; height: 146.588px; left: -54px; top: -16px;
+  transform: rotate(-6.57deg) scaleY(-1);
+}
+@media(min-width:701px) {
+  .advantages__choice .advantages__detail > p { padding-top: calc(40 * var(--accordion-unit)); }
+  .advantages__choice:first-child .advantages__oval {
+    width: calc(395.599 * var(--accordion-unit)); height: calc(146.588 * var(--accordion-unit));
+    left: calc(-54 * var(--accordion-unit)); top: calc(-16 * var(--accordion-unit));
+  }
+}
+
+/* Овал остаётся в DOM при смене пункта, чтобы предыдущий штрих плавно гас. */
+.advantages__choice svg.advantages__oval { display: block; overflow: visible; pointer-events: none; }
+
+.advantages .advantages__visual--engineering .advantages__image { inset: -20.01% 0 auto; width: 100%; height: 120%; object-fit: fill; }
+.advantages .advantages__visual--parking .advantages__image { inset: -21.44% auto auto 0; width: 119.45%; height: 142.88%; object-fit: fill; }
+.advantages__visual--engineering figcaption, .advantages__visual--parking figcaption { font-size: calc(90.19 * var(--detail-unit)); line-height: calc(51.2 * var(--detail-unit)); width: calc(444.437 * var(--detail-unit)); right: calc(-21 * var(--detail-unit)); bottom: calc(40 * var(--detail-unit)); }
+.advantages__choice:nth-child(4) .advantages__oval { width: calc(359.405 * var(--accordion-unit, 1px)); height: calc(94.685 * var(--accordion-unit, 1px)); left: calc(-32 * var(--accordion-unit, 1px)); top: calc(-15 * var(--accordion-unit, 1px)); transform: rotate(-5.15deg) scaleY(-1); }
+.advantages__choice:nth-child(5) .advantages__oval { width: calc(487.298 * var(--accordion-unit, 1px)); height: calc(94.685 * var(--accordion-unit, 1px)); left: calc(-32 * var(--accordion-unit, 1px)); top: calc(-20 * var(--accordion-unit, 1px)); transform: rotate(-5.15deg) scaleY(-1); }
+
+/* Рукописные подписи — положение и типографика обновлённых пяти макетов. */
+.advantages__visual figcaption {
+  display: flex; align-items: center; justify-content: center;
+  left: calc(495.7 * var(--detail-unit)); top: calc(657.12 * var(--detail-unit));
+  right: auto; bottom: auto; width: calc(441.392 * var(--detail-unit)); height: calc(226.756 * var(--detail-unit));
+  margin-left: calc(-220.696 * var(--detail-unit)); transform: none;
+}
+.advantages__visual figcaption > span {
+  display: block; flex: none; width: calc(424.541 * var(--detail-unit));
+  font: 400 calc(86.153 * var(--detail-unit))/calc(60.366 * var(--detail-unit)) var(--script);
+  transform: rotate(-15deg);
+}
+.advantages__visual:nth-child(2) figcaption { left: calc(554.7 * var(--detail-unit)); }
+.advantages__visual:nth-child(n+3) figcaption {
+  left: calc(523.98 * var(--detail-unit)); top: calc(656.97 * var(--detail-unit));
+  width: calc(455.951 * var(--detail-unit)); height: calc(214.519 * var(--detail-unit)); margin-left: calc(-227.9755 * var(--detail-unit));
+}
+.advantages__visual:nth-child(4) figcaption { left: calc(514.98 * var(--detail-unit)); }
+.advantages__visual:nth-child(n+3) figcaption > span { width: calc(444.437 * var(--detail-unit)); font-size: calc(90.19 * var(--detail-unit)); line-height: calc(51.2 * var(--detail-unit)); }
+.advantages__visual:first-child .advantages__glow { width: calc(790.6 * var(--detail-unit)); left: calc(76.7 * var(--detail-unit)); top: calc(435.7 * var(--detail-unit)); right: auto; bottom: auto; }
+
+/* Стык преимуществ и квартир без перекрытия предыдущего экрана. */
+#advantages + #apartments { margin-top: 0; top: auto; box-shadow: none; }
+@media(min-width:701px) {
+  #advantages { --detail-unit: min(calc(100vw / 1440), calc(100svh / 900)); }
+}
+
+/* Оставляем справа полосу для фиксированной навигации, чтобы не перекрывать стрелки. */
+@media(min-width:701px) { .apartments__controls { margin-right: 64px; } }

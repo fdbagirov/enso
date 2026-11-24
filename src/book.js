@@ -42,7 +42,16 @@ function makeFace(side, spread, offset) {
   return { face, frame, shade };
 }
 
-// Текущий кадр видео → картинка для копий (снимается один раз в начале перелистывания)
+function makeCoverFace() {
+  const face = document.createElement('div');
+  face.className = 'leaf__face leaf__back leaf__cover';
+  const shade = document.createElement('i');
+  shade.className = 'leaf__shade';
+  face.append(shade);
+  return { face, shade };
+}
+
+// Текущий кадр видео снимается один раз в начале перелистывания.
 const grab = document.createElement('canvas');
 function snapshot(video) {
   if (video.readyState < 2) return null;
@@ -57,7 +66,14 @@ export function buildBook(root) {
   const spreads = [...root.querySelectorAll(':scope > .spread')];
   const videos = spreads.map((s) => s.querySelector('video'));
 
+  const closer = document.createElement('div');
+  closer.className = 'leaf leaf--closing';
+  closer.setAttribute('aria-hidden', 'true');
+  closer.inert = true;
+  root.append(closer);
+
   const leaves = [...root.querySelectorAll(':scope > .leaf')].map((leaf, i) => {
+    const closing = leaf === closer;
     leaf.replaceChildren();
     const strips = [];
     const frames = [[], []];
@@ -67,50 +83,27 @@ export function buildBook(root) {
       strip.className = 'strip' + (k === 0 ? ' strip--root' : '');
       // Лицо полосы k — кусок правой страницы; оборот после переворота ляжет на кусок левой
       const front = makeFace('front', spreads[i], -(STRIPS + k));
-      const back = makeFace('back', spreads[i + 1], -(STRIPS - k - 1));
+      const back = closing
+        ? makeCoverFace()
+        : makeFace('back', spreads[i + 1], -(STRIPS - k - 1));
       strip.append(front.face, back.face);
       parent.append(strip);
       parent = strip;
       strips.push({ el: strip, front: front.shade, back: back.shade, pos: (k + 0.5) / STRIPS });
       frames[0].push(front.frame);
-      frames[1].push(back.frame);
+      if (!closing) frames[1].push(back.frame);
     }
-    return { el: leaf, strips, frames, sources: [videos[i], videos[i + 1]], p: -1 };
+    return { el: leaf, strips, frames, sources: videos.slice(i, i + (closing ? 1 : 2)), p: -1 };
   });
 
   let active = -1;
-
-  /* Закрытие альбома — в ту же сторону, что и листание: правая страница последнего разворота
-     поворачивается через корешок и ложится налево. Лицо — копия правой страницы, оборот — тёмная обложка. */
-  const last = spreads[spreads.length - 1];
-  const closer = document.createElement('div');
-  closer.className = 'closer';
-  closer.setAttribute('aria-hidden', 'true');
-  const closerFront = makeFace('front', last, -1);
-  closerFront.face.classList.add('closer__face');
-  const cover = document.createElement('div');
-  cover.className = 'leaf__face leaf__back closer__face closer__cover';
-  const coverShade = document.createElement('i');
-  coverShade.className = 'leaf__shade';
-  cover.append(coverShade);
-  closer.append(closerFront.face, cover);
-  const closerCast = document.createElement('i');
-  closerCast.className = 'closer__cast';
-  root.append(closer, closerCast);
-  // Копия в полосе была рассчитана на ширину листа из полос; у обложки — половина экрана
-  closerFront.face.querySelector('.spread').style.width = '200%';
 
   return {
     spreads,
     videos,
     leaves,
     cast: root.querySelector('.book__cast'),
-    closer: { el: closer, shades: [closerFront.shade, coverShade], cast: closerCast },
-    // Альбом начинает закрываться: на копию левой страницы кладём текущий кадр видео
-    freezeCloser() {
-      const src = snapshot(last.querySelector('video'));
-      if (src) closerFront.frame.src = src;
-    },
+    closer,
     // Лист i начинает движение: на его копии кладём текущие кадры обоих видео
     setActiveLeaf(i) {
       if (i === active) return;

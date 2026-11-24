@@ -50,6 +50,14 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   pointer-events: none;
   overflow: hidden;
 }
+.canvas__tone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+}
 .card-par {
   position: absolute;
   inset: 0;
@@ -178,9 +186,10 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 }
 
 /* ---------- Сцена истории ---------- */
-.story { position: relative; height: 2840vh; }
+.story { position: relative; min-height: 100vh; }
 .stage {
-  position: sticky;
+  position: relative;
+  pointer-events: none;
   top: 0;
   height: 100vh;
   overflow: hidden;
@@ -221,6 +230,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 
 /* ---------- Hero ---------- */
 .hero { position: absolute; inset: 0; }
+.hero .scroll-btn { pointer-events: auto; }
 .hero__block {
   position: absolute;
   top: calc(50% - 250 * var(--u));
@@ -690,58 +700,34 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0) 85%);
 }
 
-/* Закрывающийся альбом: левая страница поворачивается вокруг корешка на правую */
-/* Закрытие — в ту же сторону, что и листание: правая страница ложится через корешок налево */
-.closer {
+.leaf--closing { z-index: 11; }
+.leaf__cover { background: #2f4765; }
+.book.is-folding { background: transparent; }
+.book.is-folding > .spread--3 { clip-path: inset(0 50% 0 0); }
+.book.is-sliding { background: transparent; }
+.book.is-dismissed { opacity: 0 !important; }
+.book.is-folded::after {
+  content: '';
   position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 100%;
+  inset: 0 50% 0 0;
   z-index: 11;
-  transform-origin: 0 50%;
-  transform-style: preserve-3d;
-  visibility: hidden;
+  background: #2f4765;
 }
-/* Обложка альбома: тёмная, с затенением у корешка (у закрытого альбома корешок справа) */
-.closer__cover {
-  background:
-    linear-gradient(270deg, rgba(0, 0, 0, 0.45) 0, rgba(0, 0, 0, 0.12) calc(28 * var(--u)), rgba(255, 255, 255, 0.04) calc(40 * var(--u)), rgba(0, 0, 0, 0) calc(70 * var(--u))),
-    linear-gradient(160deg, #2a3d55 0%, #1d2b3d 100%);
-}
-/* Тень закрывающейся страницы на левой странице */
-.closer__cast {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 50%;
-  height: 100%;
-  z-index: 9;
-  opacity: 0;
-  pointer-events: none;
-  background: linear-gradient(270deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0) 85%);
-}
-/* Голубой фон блока карты: лежит под альбомом и виден, когда страница отходит от экрана */
-.backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: #dbe6f0;
-  visibility: hidden;
-}
+
 
 /* ---------- Инфраструктура: список и карта ---------- */
 .side-widget--map { opacity: 0; background: none; }
 .infra {
-  position: absolute;
-  inset: 0;
-  z-index: 7;
-  visibility: hidden;
-  pointer-events: none;
+  position: relative;
+  margin-top: -100vh;
+  height: 100vh;
+  z-index: 4;
+  overflow: hidden;
+  background: #dbe6f0;
   color: #2f4765;
   --navy: #2f4765;
 }
-.infra__bg { position: absolute; inset: 0; background: #dbe6f0; opacity: 0; }
+.infra__bg { position: absolute; inset: 0; background: #dbe6f0; }
 /* Макет 1440×900 целиком, вписанный во вьюпорт: внутри — пиксели макета */
 .infra__frame {
   position: absolute;
@@ -839,7 +825,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 /* Выбранное место: пин крупнее и темнее, подпись тёмная (как в состояниях макета) */
 .mk--pin.is-on .mk__icon { transform: scale(1.2955); }
 .mk--pin.is-on .mk__pin--on { opacity: 1; }
-.mk--pin.is-on .mk__name { color: var(--navy); top: 26.9px; }
+.mk--pin.is-on .mk__name { color: var(--navy); }
 .mk--pin:focus-visible { outline: none; }
 .mk--pin:focus-visible .mk__icon { outline: 2px solid var(--navy); outline-offset: 4px; }
 .mk--photo {
@@ -914,11 +900,11 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 /* ---------- Генплан (Figma 127:559 / 179:5856) ---------- */
 .side-widget--plan { opacity: 0; background: none; }
 .plan {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  margin-top: -55vh;
+  min-height: 100vh;
   z-index: 8;
   overflow: hidden;
-  visibility: hidden;
   pointer-events: none;
   background: #dbe6f0;
   color: #2f4765;
@@ -1105,11 +1091,10 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   white-space: nowrap;
 }
 .happy {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height: 100vh;
   z-index: 7;
   overflow: hidden;
-  visibility: hidden;
   color: #fff;
   background: #2b2420;
 }
@@ -1131,7 +1116,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   margin: 0;
   outline: 1px solid #fff;
 }
-.happy__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.happy__thumb img, .happy__thumb video { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* Заголовок привязан к правому нижнему углу, как в макете */
 .happy__title {
@@ -1162,8 +1147,252 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .happy__text {
   position: absolute;
   left: calc(120 * var(--u));
-  bottom: calc(51 * var(--u));
-  width: calc(494 * var(--u));
+  bottom: calc(56 * var(--u));
+  width: calc(345 * var(--u));
   margin: 0;
-  font: 500 calc(20 * var(--u)) / calc(26 * var(--u)) var(--sans);
+  font: 500 calc(16 * var(--u)) / calc(24 * var(--u)) var(--sans);
 }
+
+.plan__scene { scale: 1; }
+.happy__photo img { scale: 1.055; }
+.plan__key {
+  display: grid;
+  place-items: center;
+  background: rgb(255 255 255 / 50%);
+  backdrop-filter: blur(1.2px);
+  transition: background-color 180ms ease-out;
+}
+.plan__key span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 8px rgb(255 255 255 / 60%), 0 4px 8px rgb(0 0 0 / 18%);
+}
+.plan__key:hover, .plan__key[aria-expanded="true"] { background: rgb(255 255 255 / 76%); }
+.plan__contours { pointer-events: none; }
+.bld { pointer-events: none; }
+.plan.is-active .bld__fill { pointer-events: fill; }
+.bld__line { pointer-events: none; }
+
+body:not(.scroll-ready) .infra,
+body:not(.scroll-ready) #genplan,
+body:not(.scroll-ready) #happy,
+body:not(.scroll-ready) #advantages { visibility: hidden; }
+
+.mk--photo[data-place="0"] img { position: absolute; left: -67px; top: -101px; width: 636px; height: 355px; }
+.mk--photo[data-place="1"] img { position: absolute; left: -13px; top: -218px; width: 385px; height: 437px; }
+.mk--photo[data-place="2"] img { position: absolute; left: -112.6px; top: -301.2px; width: 490.4px; height: 595.9px; }
+.mk--photo[data-place="3"] img { position: absolute; left: 0; top: -77px; width: 374px; height: 280px; }
+.mk--photo[data-place="4"] img { position: absolute; left: -22px; top: -25px; width: 405px; height: 228px; }
+
+/* Section progress and contents */
+.side-widget { display: none; }
+.section-nav { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); z-index: 25; --nav-ink: #422f2c; --nav-panel: rgba(167,124,81,.1); --nav-toggle: #f0e2d5; --nav-rule: rgba(66,47,44,.2); color: var(--nav-ink); }
+.section-nav__toggle { width: 40px; min-height: 92px; padding: 20px 0; border-radius: 12px; background: var(--nav-toggle); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.section-nav__dot { display: block; width: 4px; height: 4px; border-radius: 4px; background: currentColor; opacity: .35; overflow: hidden; transition: height .3s, opacity .3s; }
+.section-nav__dot.is-active { height: 24px; opacity: 1; background: color-mix(in srgb, currentColor 25%, transparent); }
+.section-nav__dot i { display: block; width: 100%; height: 100%; background: currentColor; transform: scaleY(var(--progress)); transform-origin: top; }
+ .section-nav[data-theme="photo"] { --nav-ink: #fff; --nav-panel: rgba(36,48,59,.55); --nav-toggle: rgba(255,255,255,.16); --nav-rule: rgba(255,255,255,.25); }
+.section-nav[data-theme="blue"] { --nav-ink: #2f4765; --nav-panel: rgba(187,207,226,.82); --nav-toggle: #bbcfe2; --nav-rule: rgba(47,71,101,.2); }
+.section-nav[data-theme="photo"] .section-nav__contents > img { filter: brightness(0) invert(1); }
+.section-nav[data-theme="blue"] .section-nav__contents > img { filter: brightness(0) saturate(100%) invert(26%) sepia(19%) saturate(1070%) hue-rotate(174deg) brightness(91%) contrast(88%); }
+.section-nav__contents { position: absolute; right: 0; top: 50%; width: min(440px, calc(100vw - 48px)); padding: 24px; border-radius: 12px; background: var(--nav-panel); backdrop-filter: blur(54px); color: var(--nav-ink); opacity: 0; visibility: hidden; transform: translateY(-48%); transition: opacity .25s, transform .25s, visibility .25s; }
+.section-nav.is-open .section-nav__contents { opacity: 1; visibility: visible; transform: translateY(-50%); }
+.section-nav__contents > img { margin-bottom: 24px; }
+.section-nav__link { width: 100%; display: flex; gap: 8px; align-items: baseline; padding: 16px 0; border-bottom: 1px solid var(--nav-rule); text-align: left; font: 20px/28px var(--serif); letter-spacing: -.2px; }
+.section-nav__link:last-child { border-bottom: 0; }
+.section-nav__link > span { width: 32px; flex-shrink: 0; font: 40px/28px var(--script); }
+.section-nav__link { position: relative; color: var(--nav-ink); }
+.section-nav__link[aria-current]::after {
+  content: '';
+  position: absolute;
+  right: 3.19px;
+  top: 50%;
+  width: 8px;
+  height: 9.673px;
+  transform: translateY(-50%) rotate(-4.97deg);
+  background: currentColor;
+  mask: url('/img/nav-active.svg') center / contain no-repeat;
+  -webkit-mask: url('/img/nav-active.svg') center / contain no-repeat;
+}
+.section-nav__link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .section-nav * { transition: none; } }
+
+/* The story's pin spacer must never intercept the infrastructure beneath it. */
+.story,
+.story > .pin-spacer {
+  pointer-events: none;
+}
+.infra,
+.infra .place__name,
+.infra .mk--pin {
+  pointer-events: auto;
+}
+
+#happy, #advantages, #apartments {
+  margin-top: 0;
+}
+#happy { box-shadow: 0 -18px 50px rgba(35,45,55,.1); }
+#happy { z-index: 6; }
+#advantages { z-index: 7; }
+#apartments { z-index: 8; }
+
+
+/* A single spring-driven shell for default, hover and expanded states. */
+.section-nav { width: 40px; height: 105px; border-radius: 12px; background: var(--nav-panel); backdrop-filter: blur(54px); }
+.section-nav__toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 100%; min-height: 0; padding: 0; justify-content: center; background: transparent; }
+.section-nav.is-light .section-nav__toggle, .section-nav.is-blue .section-nav__toggle { background: transparent; }
+.section-nav__dot { margin-left: auto; margin-right: 18px; }
+.section-nav__contents { inset: 0; width: 100%; height: 100%; top: 0; padding: 24px; background: transparent; backdrop-filter: none; transform: none; overflow: hidden; }
+.section-nav.is-open .section-nav__contents { transform: none; }
+.section-nav.is-open .section-nav__toggle { opacity: 0; pointer-events: none; }
+.section-nav__toggle { transition: opacity .16s; }
+.section-nav__contents > img { width: 114px; height: 21px; }
+.section-nav__close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; color: var(--nav-ink); }
+.section-nav__close span { position: absolute; top: 15px; left: 7px; width: 18px; height: 1.5px; background: currentColor; transform: rotate(45deg); }
+.section-nav__close span:last-child { transform: rotate(-45deg); }
+.section-nav__link { white-space: nowrap; }
+
+.mk--pin::before { content: ''; position: absolute; left: -72px; top: -72px; width: 144px; height: 125px; }
+.mk--photo { pointer-events: none; z-index: 10; }
+.mk--pin { z-index: 3; }
+.mk--pin .mk__icon, .mk--pin .mk__name { pointer-events: none; }
+/* Форма заявки — обычная секция после квартир. */
+.request-section { position: relative; isolation: isolate; min-height: 900px; min-height: max(900px, 100svh); background: var(--bg); color: var(--ink); overflow: hidden; z-index: 9; padding: 153px 24px 24px; }
+.request-section__art { position: absolute; inset: 0; pointer-events: none; z-index: -1; }
+.request-section__picture { position: absolute; margin: 0; overflow: hidden; border: 1px solid #967a75; }
+.request-section__picture img { width: 100%; height: 100%; object-fit: cover; max-width: none; }
+.request-section__picture .request-section__crop { position: absolute; width: 275.22%; height: 225.85%; left: -50.86%; top: -25.61%; }
+.request-section__picture--4 img { position: absolute; width: 236.5%; height: 220.55%; left: -136.93%; top: -10.19%; }
+.request-section__picture--7 img { position: absolute; width: 222.93%; height: 550%; left: -67.48%; top: -214.61%; }
+.request-section__picture--8 { transform: scaleY(-1); }
+.request-section__body { position: relative; width: min(637px, 100%); margin: 0 auto; }
+.request-section h2 { margin: 0; text-align: center; font: 80px/68px var(--serif); letter-spacing: -1.6px; }
+.request-section__body > p { max-width: 488px; margin: 37px auto 60px; opacity: .5; text-align: center; font: 500 20px/24px var(--sans); }
+.request-section form { position: relative; width: min(547px,100%); margin: auto; z-index: 1; }
+.request-section label { display: block; }
+.request-section label + label { margin-top: 9px; }
+.request-section label > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.request-section input { width: 100%; height: 73px; border: 0; border-bottom: 1px solid #dbccca; background: transparent; border-radius: 0; color: var(--ink); font: 20px/24px var(--sans); outline-offset: 4px; }
+.request-section input::placeholder { color: #957672; }
+.request-section__submit { margin-top: 40px; height: 64px; padding: 0 40px; border-radius: 12px; background: var(--ink); color: white; font: 500 20px/24px var(--sans); }
+.request-section__script { position: relative; margin: 0 -60px 0 auto; width: 482px; transform: rotate(-18.23deg); opacity: .69; text-align: center; font: 90px/.6 var(--script); pointer-events: none; }
+.request-section__script span { display: inline-block; margin-top: 38px; }
+.request-section__status { font: 14px/20px var(--sans); }
+.request-section small { display: block; text-align: center; margin-top: 100px; font: 16px/20px var(--sans); }
+@media(max-width:700px) {
+  .request-section { padding-top: 100px; min-height: 850px; }
+  .request-section h2 { font-size: 52px; line-height: .9; }
+  .request-section__body > p { font-size: 17px; line-height: 23px; margin-bottom: 44px; }
+  .request-section__script { width: 100%; margin: 45px 0 0; font-size: 65px; }
+  .request-section__art { opacity: .25; }
+  .request-section__picture { max-width: 70px; }
+}
+
+
+/* Табличка следует за той же точкой карты, что и здание. */
+.mk--label { margin-top: -116px; z-index: 4; }
+
+/* Генплан остаётся под шторкой следующего экрана. */
+#genplan { z-index: 5; background: #202721; }
+#happy { margin-top: 0; z-index: 6; }
+.plan__transition-shade { position: absolute; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; }
+.happy__photo img { scale: 1.09; }
+
+/* Форма занимает ровно один экран; композиция масштабируется по его высоте. */
+.request-section {
+  height: 100svh;
+  min-height: 0;
+  padding-top: clamp(48px, 17svh, 153px);
+  padding-bottom: 24px;
+}
+.request-section h2 { font-size: clamp(44px, min(5.56vw, 8.89svh), 80px); line-height: .85; }
+.request-section__body > p { margin-top: clamp(16px, 4.1svh, 37px); margin-bottom: clamp(20px, 6.67svh, 60px); }
+.request-section input { height: clamp(44px, 8.12svh, 73px); }
+.request-section__submit { margin-top: clamp(16px, 4.45svh, 40px); height: clamp(44px, 7.12svh, 64px); }
+.request-section__script { margin-top: 0; font-size: clamp(42px, min(6.25vw, 10svh), 90px); }
+.request-section__script span { margin-top: clamp(16px, 4.22svh, 38px); }
+.request-section small { position: absolute; left: 0; right: 0; bottom: 20px; margin: 0; }
+@media(max-width:700px) {
+  .request-section { padding-top: clamp(64px, 12svh, 100px); }
+  .request-section h2 { font-size: clamp(38px, 6.5svh, 52px); }
+  .request-section__body > p { margin-top: 20px; margin-bottom: 24px; }
+  .request-section__script { margin-top: 32px; font-size: clamp(42px, 7svh, 65px); }
+  .request-section small { font-size: 13px; bottom: 16px; }
+}
+
+
+/* Обновлённые пять точек генплана: одинаковый диаметр 56. */
+.plan__key { width: 56px; height: 56px; z-index: 4; }
+.plan__key span { width: 26.353px; height: 26.353px; box-shadow: 0 0 0 6.588px rgb(255 255 255 / 60%), 0 3px 6px rgb(0 0 0 / 13%); }
+.plan__hover-shape { position: absolute; max-width: none; opacity: 0; pointer-events: none; transition: opacity 180ms ease-out; z-index: 2; }
+.plan__hover-shape.is-on { opacity: 1; }
+.bld.is-on > use { opacity: 0; }
+
+
+/* Невидимые точные силуэты принимают наведение по всей площади зданий. */
+.plan__building-hit { position: absolute; max-width: none; overflow: visible; opacity: 0; pointer-events: none; z-index: 3; }
+.plan.is-active .plan__building-hit :is(path, polygon, rect, circle, ellipse, use) { pointer-events: visiblePainted; cursor: pointer; }
+.plan__key { transition: background-color 180ms ease-out, opacity 180ms ease-out; }
+.plan__key.is-hovered { opacity: 0 !important; }
+.plan__key::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgb(255 255 255 / 22%); pointer-events: none; animation: plan-point-breathe 3.6s ease-in-out infinite; }
+.plan__key:nth-of-type(2n)::before { animation-delay: -.9s; }
+.plan__key:nth-of-type(3n)::before { animation-delay: -1.8s; }
+@keyframes plan-point-breathe { 0%,100% { transform: scale(.92); opacity: .3; } 50% { transform: scale(1.18); opacity: .7; } }
+@media(prefers-reduced-motion:reduce) { .plan__key::before { animation: none; } }
+
+/* Единые темы фиксированной навигации. */
+:root, :root[data-nav-theme="cream"] { --fixed-ink: #422f2c; --fixed-button: #422f2c; --fixed-button-text: #fff; --fixed-glass: #f0e2d5; --fixed-blur: 0px; }
+:root[data-nav-theme="photo-dark"] { --fixed-ink: #fff; --fixed-button: #fff; --fixed-button-text: #422f2c; --fixed-glass: rgba(255,255,255,.12); --fixed-blur: 20.75px; }
+:root[data-nav-theme="sky-blue"] { --fixed-ink: #2f4765; --fixed-button: #2f4765; --fixed-button-text: #fff; --fixed-glass: #bbcfe2; --fixed-blur: 0px; }
+.header .logo { background-color: var(--fixed-ink); }
+.header .btn--dark { background-color: var(--fixed-button); color: var(--fixed-button-text); }
+.header .btn-burger { background-color: var(--fixed-glass); backdrop-filter: blur(var(--fixed-blur)); }
+.header .btn-burger span { background-color: var(--fixed-ink); }
+.section-nav[data-nav-theme] { --nav-ink: var(--fixed-ink); --nav-panel: var(--fixed-glass); --nav-rule: color-mix(in srgb, var(--fixed-ink) 20%, transparent); color: var(--fixed-ink); background-color: var(--fixed-glass); backdrop-filter: blur(var(--fixed-blur)); }
+.section-nav[data-nav-theme] .section-nav__contents { background-color: var(--fixed-glass); backdrop-filter: blur(var(--fixed-blur)); }
+.header .logo, .header .btn--dark, .header .btn-burger, .header .btn-burger span, .section-nav, .section-nav__link { transition: color .35s ease, background-color .35s ease, border-color .35s ease; }
+.section-nav[data-nav-theme="photo-dark"] .section-nav__contents > img { filter: brightness(0) invert(1); }
+@media(prefers-reduced-motion:reduce) { .header .logo, .header .btn--dark, .header .btn-burger, .header .btn-burger span, .section-nav { transition: none; } }
+
+:root[data-nav-theme="photo-plan"] { --fixed-ink: #fff; --fixed-button: #2f4765; --fixed-button-text: #fff; --fixed-glass: rgba(255,255,255,.12); --fixed-blur: 20.75px; }
+.section-nav[data-nav-theme="photo-plan"] .section-nav__contents > img { filter: brightness(0) invert(1); }
+
+/* Подложки индикатора в макетах отличаются от бургера. */
+:root, :root[data-nav-theme="cream"] { --chapter-panel: rgb(234.772 216.75 198.728); --chapter-blur: 0px; }
+:root[data-nav-theme="sky-blue"] { --chapter-panel: rgb(186.6 207.5 226.5); --chapter-blur: 0px; }
+:root[data-nav-theme="photo-dark"], :root[data-nav-theme="photo-plan"] { --chapter-panel: rgba(255,255,255,.1); --chapter-blur: 48px; }
+.section-nav[data-nav-theme] { --nav-panel: var(--chapter-panel); background-color: var(--chapter-panel); backdrop-filter: blur(var(--chapter-blur)); }
+.section-nav[data-nav-theme] .section-nav__contents { background-color: var(--chapter-panel); backdrop-filter: blur(var(--chapter-blur)); }
+.section-nav[data-nav-theme] .section-nav__contents > img { filter: none; }
+.section-nav[data-nav-theme="photo-dark"] .section-nav__contents > img, .section-nav[data-nav-theme="photo-plan"] .section-nav__contents > img { filter: brightness(0) invert(1); }
+.section-nav[data-nav-theme="sky-blue"] .section-nav__contents > img { filter: brightness(0) saturate(100%) invert(26%) sepia(19%) saturate(1070%) hue-rotate(174deg) brightness(91%) contrast(88%); }
+
+/* Обновлённый хиро 127:224. */
+.header .logo { width: 150px; left: calc(50% - 75px); mask-image: url('/img/hero/logo.svg'); -webkit-mask-image: url('/img/hero/logo.svg'); }
+.hero__block { top: calc(50% - 266 * var(--u)); gap: calc(8 * var(--u)); }
+.hero .tag { display: flex; justify-content: center; align-items: center; width: calc(175 * var(--u)); flex: 0 0 calc(175 * var(--u)); border-color: #d6cccb; padding: calc(12 * var(--u)) calc(24 * var(--u)); }
+
+/* Две строки подписи привязаны к секции, а не к высоте формы. */
+.request-section { --form-unit: min(calc(100vw / 1440), calc(100svh / 900)); }
+.request-section__script { position: absolute; inset: 0; width: auto; margin: 0; transform: none; opacity: .69; pointer-events: none; }
+.request-section__script .request-section__script-line { position: absolute; display: flex; align-items: center; justify-content: center; margin: 0; }
+.request-section__script-line i { display: block; width: calc(481.935 * var(--form-unit)); flex: none; font: 400 calc(90.502 * var(--form-unit))/calc(54.301 * var(--form-unit)) var(--script); text-align: center; transform: rotate(-18.23deg); }
+.request-section__script-line--first { left: calc(50% + 133.67 * var(--form-unit)); top: calc(50% + 108.34 * var(--form-unit)); width: calc(491.844 * var(--form-unit)); height: calc(254.294 * var(--form-unit)); margin-left: calc(-245.922 * var(--form-unit)) !important; }
+.request-section__script-line--last { left: calc(50% + 156.79 * var(--form-unit)); top: calc(50% + 231.34 * var(--form-unit)); width: calc(474.951 * var(--form-unit)); height: calc(203.004 * var(--form-unit)); margin-left: calc(-237.4755 * var(--form-unit)) !important; }
+@media(max-width:700px) {
+  .request-section__script-line--first { left: 50%; top: 70%; }
+  .request-section__script-line--last { left: 53%; top: 79%; }
+}
+
+/* В обновлённой форме подпись непрозрачная, фотографии принимают hover. */
+.request-section__script { opacity: 1; }
+.request-section__picture { pointer-events: auto; }
+.request-section__body { z-index: 1; }
+
+.request-section__picture { translate: calc(var(--drift-x, 0) * 1px) calc((var(--drift-y, 0) + var(--float-y, 0)) * 1px); }
+
+/* GSAP entrance resets individual transforms inline; keep pointer drift independent. */
+.request-section__picture { translate: calc(var(--drift-x, 0) * 1px) calc((var(--drift-y, 0) + var(--float-y, 0)) * 1px) !important; }
+.request-section__script-line i { white-space: nowrap; }
