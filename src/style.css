@@ -1425,3 +1425,9 @@ body:not(.scroll-ready) #advantages { visibility: hidden; }
 
 /* Кадрирование горизонтальных фото в вертикальной стопке без растяжения. */
 .canvas.is-preloading .card__crop img { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; object-fit: cover; }
+
+/* Photo frames follow source proportions; no inherited Figma crop on replacements. */
+.collage-item-inner.photo--face { width: calc(230.27 * var(--u)); height: calc(293.07 * var(--u)); }
+.photo--face .photo__cover { object-position: center; }
+.collage-item-inner.photo--district { height: calc(321.13 * var(--u)); }
+.photo__cover--couple { object-position: 50% 25%; }
