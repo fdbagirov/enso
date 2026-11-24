@@ -7,6 +7,10 @@
   <link rel="preload" href="/fonts/OpiumNew-Regular.otf" as="font" type="font/otf" crossorigin />
   <link rel="preload" href="/fonts/Gogol-Regular.otf" as="font" type="font/otf" crossorigin />
   <link rel="stylesheet" href="/src/style.css?v=pins-form-26" />
+  <link rel="preload" href="/img/hero/logo.svg" as="image" fetchpriority="high" />
+  <style>
+    .is-loading .header .logo { position: fixed; left: 50%; top: 50vh; width: min(56vw, 860px); height: min(10.453vw, 160.533px); transform: translate(-50%, -50%); opacity: 1; }
+  </style>
   <!-- При обновлении страница всегда открывается с первого экрана (прелоадер → Hero):
        браузер не восстанавливает скролл, а перед уходом со страницы позиция обнуляется. -->
   <script>
@@ -20,7 +24,7 @@
 </head>
 <body class="is-loading">
   <!-- Фоновый холст с карточками: стопка прелоадера → сетка Hero → фон историй -->
-  <div class="canvas" id="canvas" aria-hidden="true"></div>
+  <div class="canvas is-preloading" id="canvas" aria-hidden="true"></div>
 
   <!-- Хедер -->
   <header class="header">

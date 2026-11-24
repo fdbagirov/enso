@@ -1422,3 +1422,6 @@ body:not(.scroll-ready) #advantages { visibility: hidden; }
  .request-section__script-line--middle { top: calc(50% + 205 * var(--form-unit)); }
  .request-section__script-line--last { top: calc(50% + 260 * var(--form-unit)); }
 }
+
+/* Кадрирование горизонтальных фото в вертикальной стопке без растяжения. */
+.canvas.is-preloading .card__crop img { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; object-fit: cover; }

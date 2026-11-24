@@ -134,6 +134,7 @@ const ZOOM = { at: 6.6, d: 1.3 }; // фото главы 3 → видео на �
 const ZOOM_END = ZOOM.at + ZOOM.d; // отсюда видео играет, а разворот 01 проявляется сам
 let spreadIntro; // появление разворота 01 — по времени, не по скроллу
 let introShown = false;
+let previousBookTime = 0;
 const FLIPS = [ // перелистывания 01 → 02 → 03
   { at: 9.4, d: 1.6 },
   { at: 11.8, d: 1.6 },
@@ -329,7 +330,7 @@ function logoStartVars() {
 }
 
 layoutStack();
-gsap.set(logo, { ...logoStartVars(), opacity: 0 });
+gsap.set(logo, { ...logoStartVars(), opacity: 1 });
 
 /* ---------------- Загрузка ---------------- */
 // Проценты = сколько фото уже легло в стопку: 100% ровно на последнем фото.
@@ -360,7 +361,6 @@ const DEAL_START = 0.35;
 const lastDeal = DEAL_START + (stackCards.length - 1) * DEAL_STEP;
 const intro = gsap.timeline({ paused: true });
 intro
-  .to(logo, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 0.1)
   .fromTo(progress, { deal: 0 }, { deal: 100, duration: lastDeal - DEAL_START + 0.01, ease: 'none', onUpdate: renderCount }, DEAL_START);
 stackCards.forEach((c, i) => {
   const at = DEAL_START + i * DEAL_STEP;
@@ -380,6 +380,7 @@ await Promise.all([loadImages, document.fonts.ready, inlineSvgs(), intro.then()]
 renderCount();
 /* ---------------- Распад стопки → Hero (GSAP Flip) ---------------- */
 // Стопка разлетается сразу, как только легло последнее фото и счётчик дошёл до 100%
+canvas.classList.remove('is-preloading');
 const reveal = gsap.timeline({ delay: 0.12 });
 const stackEls = stackCards.map((c) => c.el);
 // Спрятанные под верхними фото карточки возвращаем в колоду непрозрачными — разлетаются все
@@ -525,7 +526,13 @@ function updateBook(t) {
 
   // Тексты и коллаж первого разворота не привязаны к скроллу: появляются сами, когда видео раскрылось
   const show = t >= ZOOM_END - 0.05;
-  if (show !== introShown) {
+  const reversing = t < previousBookTime;
+  previousBookTime = t;
+  if (reversing && t < ZOOM_END + 0.4) {
+    const remaining = gsap.utils.clamp(0, 1, (t - ZOOM_END) / 0.4);
+    spreadIntro?.progress(Math.min(spreadIntro.progress(), remaining)).pause();
+    introShown = false;
+  } else if (show !== introShown) {
     introShown = show;
     if (show) spreadIntro?.play();
     else spreadIntro?.reverse();
