@@ -110,7 +110,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  column-gap: 24px;
+  column-gap: 48px;
   row-gap: 8px;
   padding-inline: 14px;
 }
@@ -124,7 +124,7 @@
 .apartments__filters button + button::before {
   position: absolute;
   top: 50%;
-  left: -13px;
+  left: -24px;
   width: 1px;
   height: 16px;
   background: var(--line-soft);

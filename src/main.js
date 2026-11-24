@@ -358,7 +358,7 @@ const loadImages = Promise.all(
 const DEAL_STEP = 0.17;
 const DEAL_START = 0.35;
 const lastDeal = DEAL_START + (stackCards.length - 1) * DEAL_STEP;
-const intro = gsap.timeline();
+const intro = gsap.timeline({ paused: true });
 intro
   .to(logo, { opacity: 1, duration: 0.8, ease: 'power2.out' }, 0.1)
   .fromTo(progress, { deal: 0 }, { deal: 100, duration: lastDeal - DEAL_START + 0.01, ease: 'none', onUpdate: renderCount }, DEAL_START);
@@ -369,7 +369,11 @@ stackCards.forEach((c, i) => {
     .fromTo(c.el, { scale: 1.06 }, { scale: 1, duration: 0.3, ease: 'power3.out' }, at);
   if (i < stackCards.length - 3) intro.set(c.el, { opacity: 0 }, at + DEAL_STEP * 3);
 });
+// Не проигрывать стопку пустых рамок при первом визите и медленной сети.
+await Promise.all(stackCards.flatMap(card => [...card.el.querySelectorAll('img')]
+  .map(image => image.decode().catch(() => {}))));
 if (reduceMotion) intro.progress(1);
+else intro.play();
 renderCount();
 
 await Promise.all([loadImages, document.fonts.ready, inlineSvgs(), intro.then()]);
