@@ -343,3 +343,10 @@
 
 /* Оставляем справа полосу для фиксированной навигации, чтобы не перекрывать стрелки. */
 @media(min-width:701px) { .apartments__controls { margin-right: 64px; } }
+
+/* Карточки 215:1697: OpiumNew — подписи, Gogol — все числа и единицы. */
+.apartment__info { gap: calc(6 * var(--card-unit)); font: 400 calc(35.639 * var(--card-unit))/calc(44.548 * var(--card-unit)) var(--serif); letter-spacing: calc(-.3564 * var(--card-unit)); }
+.apartment__info > span { display: flex; align-items: baseline; justify-content: center; gap: calc(8.91 * var(--card-unit)); }
+.apartment__info i, .apartment__info strong { margin: 0; font: 400 calc(62.367 * var(--card-unit))/1 var(--script); letter-spacing: 0; text-box-trim: trim-both; text-box-edge: cap alphabetic; }
+.apartment__info strong { display: block; }
+.apartment__info sup { font: 400 calc(32 * var(--card-unit))/1 var(--script); vertical-align: super; position: relative; top: -.1em; }
