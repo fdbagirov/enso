@@ -175,6 +175,16 @@ const lazy = (fn, keys = ['left', 'top', 'width', 'height', 'opacity', 'filter',
 /* ---------------- Элементы ---------------- */
 const header = $('.header');
 const logo = $('.logo');
+logo.addEventListener('click', event => {
+  event.preventDefault();
+  if (!document.body.classList.contains('scroll-ready')) return;
+  lenis.scrollTo(0, {
+    duration: reduceMotion ? 0 : 1.5,
+    immediate: reduceMotion,
+    force: true,
+    onComplete: () => history.replaceState(null, '', location.pathname + location.search),
+  });
+});
 const counter = $('.preloader__count');
 const heroLines = $$('.hero__title .line__in');
 const heroTags = $$('.hero .tag');
