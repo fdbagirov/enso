@@ -127,8 +127,8 @@
   left: -13px;
   width: 1px;
   height: 16px;
-  background: url('/img/showcase/132c4.svg') center / 16px 1px;
-  transform: translateY(-50%) rotate(90deg);
+  background: var(--line-soft);
+  transform: translateY(-50%);
   transform-origin: center;
   content: '';
 }
